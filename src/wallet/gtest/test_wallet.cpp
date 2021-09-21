@@ -387,7 +387,7 @@ TEST(WalletTests, SetSaplingNoteAddrsInCWalletTx) {
         auto expsk = sk.expsk;
         auto fvk = expsk.full_viewing_key();
         auto ivk = fvk.in_viewing_key();
-        auto pk = sk.DefaultAddress();
+        auto pk = sk.ToXFVK().DefaultAddress();
 
         libzcash::SaplingNote note(pk, 50000, zip_212_enabled[ver]);
         auto cm = note.cmu().value();
@@ -529,7 +529,7 @@ TEST(WalletTests, FindMySaplingNotes) {
     auto sk = GetTestMasterSaplingSpendingKey();
     auto expsk = sk.expsk;
     auto extfvk = sk.ToXFVK();
-    auto pa = sk.DefaultAddress();
+    auto pa = extfvk.DefaultAddress();
 
     auto testNote = GetTestSaplingNote(pa, 50000);
 
@@ -663,7 +663,7 @@ TEST(WalletTests, GetConflictedSaplingNotes) {
         auto expsk = sk.expsk;
         auto extfvk = sk.ToXFVK();
         auto ivk = extfvk.fvk.in_viewing_key();
-        auto pk = sk.DefaultAddress();
+        auto pk = extfvk.DefaultAddress();
 
         ASSERT_TRUE(wallet.AddSaplingZKey(sk));
         ASSERT_TRUE(wallet.HaveSaplingSpendingKey(extfvk));
@@ -823,7 +823,7 @@ TEST(WalletTests, SaplingNullifierIsSpent) {
     auto sk = GetTestMasterSaplingSpendingKey();
     auto expsk = sk.expsk;
     auto extfvk = sk.ToXFVK();
-    auto pa = sk.DefaultAddress();
+    auto pa = extfvk.DefaultAddress();
 
     auto testNote = GetTestSaplingNote(pa, 50000);
 
@@ -908,7 +908,7 @@ TEST(WalletTests, NavigateFromSaplingNullifierToNote) {
     auto sk = GetTestMasterSaplingSpendingKey();
     auto expsk = sk.expsk;
     auto extfvk = sk.ToXFVK();
-    auto pa = sk.DefaultAddress();
+    auto pa = extfvk.DefaultAddress();
 
     auto testNote = GetTestSaplingNote(pa, 50000);
 
@@ -1039,7 +1039,7 @@ TEST(WalletTests, SpentSaplingNoteIsFromMe) {
         auto expsk = sk.expsk;
         auto extfvk = sk.ToXFVK();
         auto ivk = extfvk.fvk.in_viewing_key();
-        auto pk = sk.DefaultAddress();
+        auto pk = extfvk.DefaultAddress();
 
         // Generate Sapling note A
         libzcash::SaplingNote note(pk, 50000, zip_212_enabled[ver]);
@@ -1835,13 +1835,13 @@ TEST(WalletTests, UpdatedSaplingNoteData) {
     auto sk = m.Derive(0);
     auto expsk = sk.expsk;
     auto extfvk = sk.ToXFVK();
-    auto pa = sk.DefaultAddress();
+    auto pa = extfvk.DefaultAddress();
 
     // Generate dummy recipient Sapling address
     auto sk2 = m.Derive(1);
     auto expsk2 = sk2.expsk;
     auto extfvk2 = sk2.ToXFVK();
-    auto pa2 = sk2.DefaultAddress();
+    auto pa2 = extfvk2.DefaultAddress();
 
     auto testNote = GetTestSaplingNote(pa, 50000);
 
@@ -1977,7 +1977,7 @@ TEST(WalletTests, MarkAffectedSaplingTransactionsDirty) {
     auto expsk = sk.expsk;
     auto extfvk = sk.ToXFVK();
     auto ivk = extfvk.fvk.in_viewing_key();
-    auto pk = sk.DefaultAddress();
+    auto pk = extfvk.DefaultAddress();
 
     ASSERT_TRUE(wallet.AddSaplingZKey(sk));
     ASSERT_TRUE(wallet.HaveSaplingSpendingKey(extfvk));
