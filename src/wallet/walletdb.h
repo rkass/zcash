@@ -40,18 +40,29 @@ enum DBErrors
     DB_NEED_REWRITE
 };
 
-/* simple hd chain data model */
+/* hd chain metadata */
 class CHDChain
 {
-public:
-    static const int VERSION_HD_BASE = 1;
-    static const int CURRENT_VERSION = VERSION_HD_BASE;
+private:
     int nVersion;
     uint256 seedFp;
     int64_t nCreateTime; // 0 means unknown
-    uint32_t saplingAccountCounter;
+    uint32_t accountCounter;
 
     CHDChain() { SetNull(); }
+
+    void SetNull()
+    {
+        nVersion = CHDChain::CURRENT_VERSION;
+        seedFp.SetNull();
+        nCreateTime = 0;
+        accountCounter = 0;
+    }
+public:
+    static const int VERSION_HD_BASE = 1;
+    static const int CURRENT_VERSION = VERSION_HD_BASE;
+
+    CHDChain(uint256 seedFpIn, int64_t nCreateTimeIn): nVersion(CHDChain::CURRENT_VERSION), seedFp(seedFpIn), nCreateTime(nCreateTimeIn), accountCounter(0) {}
 
     ADD_SERIALIZE_METHODS;
 
@@ -61,58 +72,26 @@ public:
         READWRITE(nVersion);
         READWRITE(seedFp);
         READWRITE(nCreateTime);
-        READWRITE(saplingAccountCounter);
+        READWRITE(accountCounter);
     }
 
-    void SetNull()
-    {
-        nVersion = CHDChain::CURRENT_VERSION;
-        seedFp.SetNull();
-        nCreateTime = 0;
-        saplingAccountCounter = 0;
-    }
-};
-
-class CKeyMetadata
-{
-public:
-    static const int VERSION_BASIC=1;
-    static const int VERSION_WITH_HDDATA=10;
-    static const int CURRENT_VERSION=VERSION_WITH_HDDATA;
-    int nVersion;
-    int64_t nCreateTime; // 0 means unknown
-    std::string hdKeypath; //optional HD/zip32 keypath
-    uint256 seedFp;
-
-    CKeyMetadata()
-    {
-        SetNull();
-    }
-    CKeyMetadata(int64_t nCreateTime_)
-    {
-        SetNull();
-        nCreateTime = nCreateTime_;
+    template <typename Stream>
+    static CHDChain Read(Stream& stream) {
+        CHDChain chain;
+        stream >> chain;
+        return chain;
     }
 
-    ADD_SERIALIZE_METHODS;
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(this->nVersion);
-        READWRITE(nCreateTime);
-        if (this->nVersion >= VERSION_WITH_HDDATA)
-        {
-            READWRITE(hdKeypath);
-            READWRITE(seedFp);
-        }
+    const uint256 GetSeedFingerprint() const {
+        return seedFp;
     }
 
-    void SetNull()
-    {
-        nVersion = CKeyMetadata::CURRENT_VERSION;
-        nCreateTime = 0;
-        hdKeypath.clear();
-        seedFp.SetNull();
+    uint32_t GetAccountCounter() const {
+        return accountCounter;
+    }
+
+    uint32_t IncrementAccountCounter() {
+        return ++accountCounter;
     }
 };
 
@@ -169,10 +148,14 @@ public:
     static bool Recover(CDBEnv& dbenv, const std::string& filename);
 
     bool WriteNetworkInfo(const std::string& networkId);
-    bool WriteHDSeed(const HDSeed& seed);
-    bool WriteCryptedHDSeed(const uint256& seedFp, const std::vector<unsigned char>& vchCryptedSecret);
-    //! write the hdchain model (external chain child index counter)
-    bool WriteHDChain(const CHDChain& chain);
+    bool WriteMnemonicSeed(const MnemonicSeed& seed);
+    bool WriteCryptedMnemonicSeed(const uint256& seedFp, const std::vector<unsigned char>& vchCryptedSecret);
+    bool WriteMnemonicHDChain(const CHDChain& chain);
+
+    //! Write the legacy hdchain metadata to the database
+    //!
+    //! TODO: remove when generation of new legacy-seed-based keys has been disabled.
+    bool WriteLegacyHDChain(const CHDChain& chain);
 
     /// Write spending key to wallet database, where key is payment address and value is spending key.
     bool WriteZKey(const libzcash::SproutPaymentAddress& addr, const libzcash::SproutSpendingKey& key, const CKeyMetadata &keyMeta);

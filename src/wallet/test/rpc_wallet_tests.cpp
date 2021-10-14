@@ -75,6 +75,15 @@ static UniValue ValueFromString(const std::string &str)
     return value;
 }
 
+static SaplingPaymentAddress DefaultSaplingAddress(CWallet* pwallet) {
+    auto usk = pwallet->GetUnifiedSpendingKeyForAccount(0);
+
+    return usk.value()
+        .ToFullViewingKey()
+        .GetSaplingExtendedFullViewingKey().value()
+        .FindAddress(libzcash::diversifier_index_t(0)).first;
+}
+
 BOOST_FIXTURE_TEST_SUITE(rpc_wallet_tests, WalletTestingSetup)
 
 BOOST_AUTO_TEST_CASE(rpc_addmultisig)
@@ -665,7 +674,7 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_z_importexport)
 
         // create a random Sapling key locally; split between IVKs and spending keys.
         auto testSaplingSpendingKey = m.Derive(i);
-        auto testSaplingPaymentAddress = testSaplingSpendingKey.DefaultAddress();
+        auto testSaplingPaymentAddress = testSaplingSpendingKey.ToXFVK().DefaultAddress();
         if (i % 2 == 0) {
             std::string testSaplingAddr = keyIO.EncodePaymentAddress(testSaplingPaymentAddress);
             std::string testSaplingKey = keyIO.EncodeSpendingKey(testSaplingSpendingKey);
@@ -788,11 +797,14 @@ void CheckHaveAddr(const libzcash::PaymentAddress& addr) {
 
 BOOST_AUTO_TEST_CASE(rpc_wallet_z_getnewaddress) {
     using namespace libzcash;
-    UniValue addr;
 
-    if (!pwalletMain->HaveHDSeed()) {
-        pwalletMain->GenerateNewSeed();
+    if (!pwalletMain->HaveLegacyHDSeed()) {
+        // fake a legacy seed by creating a separate mnemonic seed
+        auto seed = MnemonicSeed::Random(1);
+        pwalletMain->LoadLegacyHDSeed(seed);
     }
+
+    UniValue addr;
 
     KeyIO keyIO(Params());
     // No parameter defaults to sapling address
@@ -1449,7 +1461,7 @@ BOOST_AUTO_TEST_CASE(rpc_z_sendmany_taddr_to_sapling)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    if (!pwalletMain->HaveHDSeed()) {
+    if (!pwalletMain->HaveMnemonicSeed()) {
         pwalletMain->GenerateNewSeed();
     }
 
@@ -1459,7 +1471,7 @@ BOOST_AUTO_TEST_CASE(rpc_z_sendmany_taddr_to_sapling)
     // add keys manually
     auto taddr = pwalletMain->GenerateNewKey().GetID();
     std::string taddr1 = keyIO.EncodeDestination(taddr);
-    auto pa = pwalletMain->GenerateNewSaplingZKey();
+    auto pa = DefaultSaplingAddress(pwalletMain);
     std::string zaddr1 = keyIO.EncodePaymentAddress(pa);
 
     const Consensus::Params& consensusParams = Params().GetConsensus();
@@ -1523,11 +1535,11 @@ BOOST_AUTO_TEST_CASE(rpc_z_sendmany_taddr_to_sapling)
 
     // We should be able to decrypt the outCiphertext with the ovk
     // generated for transparent addresses
-    HDSeed seed;
-    BOOST_ASSERT(pwalletMain->GetHDSeed(seed));
+    std::optional<MnemonicSeed> seed = pwalletMain->GetMnemonicSeed();
+    BOOST_ASSERT(seed.has_value());
     BOOST_CHECK(AttemptSaplingOutDecryption(
         tx.vShieldedOutput[0].outCiphertext,
-        ovkForShieldingFromTaddr(seed),
+        ovkForShieldingFromTaddr(seed.value()),
         tx.vShieldedOutput[0].cv,
         tx.vShieldedOutput[0].cmu,
         tx.vShieldedOutput[0].ephemeralKey));
@@ -1549,6 +1561,13 @@ BOOST_AUTO_TEST_CASE(rpc_z_sendmany_taddr_to_sapling)
 BOOST_AUTO_TEST_CASE(rpc_wallet_encrypted_wallet_zkeys)
 {
     LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    if (!pwalletMain->HaveLegacyHDSeed()) {
+        // fake a legacy seed by creating a separate mnemonic seed
+        auto seed = MnemonicSeed::Random(1);
+        pwalletMain->LoadLegacyHDSeed(seed);
+    }
+
     UniValue retValue;
     int n = 100;
 
@@ -1605,10 +1624,17 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_encrypted_wallet_zkeys)
 BOOST_AUTO_TEST_CASE(rpc_wallet_encrypted_wallet_sapzkeys)
 {
     LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    if (!pwalletMain->HaveLegacyHDSeed()) {
+        // fake a legacy seed by creating a separate mnemonic seed
+        auto seed = MnemonicSeed::Random(1);
+        pwalletMain->LoadLegacyHDSeed(seed);
+    }
+
     UniValue retValue;
     int n = 100;
 
-    if(!pwalletMain->HaveHDSeed())
+    if(!pwalletMain->HaveMnemonicSeed())
     {
         pwalletMain->GenerateNewSeed();
     }
@@ -1657,7 +1683,7 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_encrypted_wallet_sapzkeys)
     // Verify the key has been added
     BOOST_CHECK_NO_THROW(retValue = CallRPC("z_listaddresses"));
     arr = retValue.get_array();
-    BOOST_CHECK(arr.size() == n+1);
+    BOOST_CHECK_EQUAL(arr.size(), n+1);
 
     // We can't simulate over RPC the wallet closing and being reloaded
     // but there are tests for this in gtest.
@@ -1667,6 +1693,12 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_encrypted_wallet_sapzkeys)
 BOOST_AUTO_TEST_CASE(rpc_z_listunspent_parameters)
 {
     SelectParams(CBaseChainParams::TESTNET);
+
+    if (!pwalletMain->HaveLegacyHDSeed()) {
+        // fake a legacy seed by creating a separate mnemonic seed
+        auto seed = MnemonicSeed::Random(1);
+        pwalletMain->LoadLegacyHDSeed(seed);
+    }
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 

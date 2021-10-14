@@ -19,12 +19,26 @@ const unsigned char ZCASH_HD_SEED_FP_PERSONAL[BLAKE2bPersonalBytes] =
 const unsigned char ZCASH_TADDR_OVK_PERSONAL[BLAKE2bPersonalBytes] =
     {'Z', 'c', 'T', 'a', 'd', 'd', 'r', 'T', 'o', 'S', 'a', 'p', 'l', 'i', 'n', 'g'};
 
-HDSeed HDSeed::Random(size_t len)
+const libzcash::diversifier_index_t MAX_TRANSPARENT_CHILD_IDX(0x40000000);
+
+MnemonicSeed MnemonicSeed::Random(uint32_t bip44CoinType, Language language, size_t entropyLen)
 {
-    assert(len >= 32);
-    RawHDSeed rawSeed(len, 0);
-    GetRandBytes(rawSeed.data(), len);
-    return HDSeed(rawSeed);
+    assert(entropyLen >= 32);
+    while (true) {
+        std::vector<unsigned char> entropy(entropyLen, 0);
+        GetRandBytes(entropy.data(), entropyLen);
+        const char* phrase = zip339_entropy_to_phrase(language, entropy.data(), entropyLen);
+        std::string mnemonic(phrase);
+        zip339_free_phrase(phrase);
+        MnemonicSeed seed(language, mnemonic);
+
+        // Verify that the seed data is valid entropy for unified spending keys at
+        // account 0 and account 0x7FFFFFFE
+        if (libzcash::UnifiedSpendingKey::Derive(seed, bip44CoinType, 0).has_value() &&
+            libzcash::DeriveZip32TransparentSpendingKey(seed, bip44CoinType, ZCASH_LEGACY_TRANSPARENT_ACCOUNT).has_value())  {
+            return seed;
+        }
+    }
 }
 
 uint256 HDSeed::Fingerprint() const
@@ -75,23 +89,22 @@ std::optional<SaplingExtendedFullViewingKey> SaplingExtendedFullViewingKey::Deri
     }
 }
 
-std::optional<std::pair<diversifier_index_t, libzcash::SaplingPaymentAddress>>
+std::optional<libzcash::SaplingPaymentAddress>
     SaplingExtendedFullViewingKey::Address(diversifier_index_t j) const
 {
     CDataStream ss_xfvk(SER_NETWORK, PROTOCOL_VERSION);
     ss_xfvk << *this;
     CSerializeData xfvk_bytes(ss_xfvk.begin(), ss_xfvk.end());
 
-    diversifier_index_t j_ret;
     CSerializeData addr_bytes(libzcash::SerializedSaplingPaymentAddressSize);
     if (librustzcash_zip32_xfvk_address(
         reinterpret_cast<unsigned char*>(xfvk_bytes.data()),
-        j.begin(), j_ret.begin(),
+        j.begin(),
         reinterpret_cast<unsigned char*>(addr_bytes.data()))) {
         CDataStream ss_addr(addr_bytes, SER_NETWORK, PROTOCOL_VERSION);
         libzcash::SaplingPaymentAddress addr;
         ss_addr >> addr;
-        return std::make_pair(j_ret, addr);
+        return addr;
     } else {
         return std::nullopt;
     }
@@ -99,13 +112,25 @@ std::optional<std::pair<diversifier_index_t, libzcash::SaplingPaymentAddress>>
 
 libzcash::SaplingPaymentAddress SaplingExtendedFullViewingKey::DefaultAddress() const
 {
-    diversifier_index_t j0;
-    auto addr = Address(j0);
-    // If we can't obtain a default address, we are *very* unlucky...
-    if (!addr) {
+    CDataStream ss_xfvk(SER_NETWORK, PROTOCOL_VERSION);
+    ss_xfvk << *this;
+    CSerializeData xfvk_bytes(ss_xfvk.begin(), ss_xfvk.end());
+
+    diversifier_index_t j_default;
+    diversifier_index_t j_ret;
+    CSerializeData addr_bytes_ret(libzcash::SerializedSaplingPaymentAddressSize);
+    if (librustzcash_zip32_find_xfvk_address(
+        reinterpret_cast<unsigned char*>(xfvk_bytes.data()),
+        j_default.begin(), j_ret.begin(),
+        reinterpret_cast<unsigned char*>(addr_bytes_ret.data()))) {
+        CDataStream ss_addr(addr_bytes_ret, SER_NETWORK, PROTOCOL_VERSION);
+        libzcash::SaplingPaymentAddress addr;
+        ss_addr >> addr;
+        return addr;
+    } else {
+        // If we can't obtain a default address, we are *very* unlucky...
         throw std::runtime_error("SaplingExtendedFullViewingKey::DefaultAddress(): No valid diversifiers out of 2^88!");
     }
-    return addr.value().second;
 }
 
 SaplingExtendedSpendingKey SaplingExtendedSpendingKey::Master(const HDSeed& seed)
@@ -141,6 +166,27 @@ SaplingExtendedSpendingKey SaplingExtendedSpendingKey::Derive(uint32_t i) const
     return xsk_i;
 }
 
+std::pair<SaplingExtendedSpendingKey, CKeyMetadata> SaplingExtendedSpendingKey::ForAccount(const HDSeed& seed, uint32_t bip44CoinType, uint32_t accountId) {
+    auto m = Master(seed);
+
+    // We use a fixed keypath scheme of m/32'/coin_type'/account'
+    // Derive m/32'
+    auto m_32h = m.Derive(32 | ZIP32_HARDENED_KEY_LIMIT);
+    // Derive m/32'/coin_type'
+    auto m_32h_cth = m_32h.Derive(bip44CoinType | ZIP32_HARDENED_KEY_LIMIT);
+
+    // Derive account key at next index, skip keys already known to the wallet
+    auto xsk = m_32h_cth.Derive(accountId | ZIP32_HARDENED_KEY_LIMIT);
+
+    // Create new metadata
+    int64_t nCreationTime = GetTime();
+    CKeyMetadata metadata(nCreationTime);
+    metadata.hdKeypath = "m/32'/" + std::to_string(bip44CoinType) + "'/" + std::to_string(accountId) + "'";
+    metadata.seedFp = seed.Fingerprint();
+
+    return std::make_pair(xsk, metadata);
+}
+
 SaplingExtendedFullViewingKey SaplingExtendedSpendingKey::ToXFVK() const
 {
     SaplingExtendedFullViewingKey ret;
@@ -153,9 +199,80 @@ SaplingExtendedFullViewingKey SaplingExtendedSpendingKey::ToXFVK() const
     return ret;
 }
 
-libzcash::SaplingPaymentAddress SaplingExtendedSpendingKey::DefaultAddress() const
-{
-    return ToXFVK().DefaultAddress();
+std::optional<CExtKey> DeriveZip32TransparentSpendingKey(const HDSeed& seed, uint32_t bip44CoinType, uint32_t accountId) {
+    auto rawSeed = seed.RawSeed();
+    auto m = CExtKey::Master(rawSeed.data(), rawSeed.size());
+
+    // We use a fixed keypath scheme of m/32'/coin_type'/account'
+    // Derive m/32'
+    auto m_32h = m.Derive(32 | ZIP32_HARDENED_KEY_LIMIT);
+    if (!m_32h.has_value()) return std::nullopt;
+
+    // Derive m/32'/coin_type'
+    auto m_32h_cth = m_32h.value().Derive(bip44CoinType | ZIP32_HARDENED_KEY_LIMIT);
+    if (!m_32h_cth.has_value()) return std::nullopt;
+
+    // Derive m/32'/coin_type'/account_id'
+    return m_32h_cth.value().Derive(accountId | ZIP32_HARDENED_KEY_LIMIT);
+}
+
+std::optional<std::pair<UnifiedSpendingKey, CKeyMetadata>> UnifiedSpendingKey::Derive(const HDSeed& seed, uint32_t bip44CoinType, uint32_t accountId) {
+    UnifiedSpendingKey usk;
+    usk.accountId = accountId;
+
+    auto transparentKey = DeriveZip32TransparentSpendingKey(seed, bip44CoinType, accountId);
+    if (!transparentKey.has_value()) return std::nullopt;
+    usk.transparentKey = transparentKey.value();
+
+    auto saplingKey = SaplingExtendedSpendingKey::ForAccount(seed, bip44CoinType, accountId);
+    usk.saplingKey = saplingKey.first;
+
+    return std::make_pair(usk, saplingKey.second);
+}
+
+UnifiedFullViewingKey UnifiedSpendingKey::ToFullViewingKey() const {
+    UnifiedFullViewingKey ufvk;
+
+    if (transparentKey.has_value()) {
+        ufvk.transparentKey = transparentKey.value().Neuter();
+    }
+
+    if (saplingKey.has_value()) {
+        ufvk.saplingKey = saplingKey.value().ToXFVK();
+    }
+
+    return ufvk;
+}
+
+std::optional<ZcashdUnifiedAddress> UnifiedFullViewingKey::Address(diversifier_index_t j) const {
+    ZcashdUnifiedAddress ua;
+
+    if (transparentKey.has_value()) {
+        if (MAX_TRANSPARENT_CHILD_IDX.less_than_le(j)) return std::nullopt;
+        CExtPubKey changeKey;
+        if (!transparentKey.value().Derive(changeKey, 0)) {
+            return std::nullopt;
+        }
+
+        CExtPubKey childKey;
+        unsigned int childIndex = (unsigned int) j.GetUint64(0);
+        if (changeKey.Derive(childKey, childIndex)) {
+            ua.transparentKey = childKey.pubkey;
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    if (saplingKey.has_value()) {
+        auto saplingAddress = saplingKey.value().Address(j);
+        if (saplingAddress.has_value()) {
+            ua.saplingAddress = saplingAddress.value();
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    return ua;
 }
 
 std::optional<unsigned long> ParseZip32KeypathAccount(const std::string& keyPath) {
@@ -168,4 +285,4 @@ std::optional<unsigned long> ParseZip32KeypathAccount(const std::string& keyPath
     }
 }
 
-}
+};

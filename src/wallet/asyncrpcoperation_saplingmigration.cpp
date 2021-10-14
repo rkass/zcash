@@ -192,6 +192,7 @@ CAmount AsyncRPCOperation_saplingmigration::chooseAmount(const CAmount& availabl
 }
 
 // Unless otherwise specified, the migration destination address is the address for Sapling account 0
+// at the smallest diversifier index that produces a valid diversified address.
 libzcash::SaplingPaymentAddress AsyncRPCOperation_saplingmigration::getMigrationDestAddress(const HDSeed& seed) {
     KeyIO keyIO(Params());
     if (mapArgs.count("-migrationdestaddress")) {
@@ -201,27 +202,18 @@ libzcash::SaplingPaymentAddress AsyncRPCOperation_saplingmigration::getMigration
         assert(saplingAddress != nullptr); // This is checked in init.cpp
         return *saplingAddress;
     }
-    // Derive the address for Sapling account 0
-    auto m = libzcash::SaplingExtendedSpendingKey::Master(seed);
-    uint32_t bip44CoinType = Params().BIP44CoinType();
 
-    // We use a fixed keypath scheme of m/32'/coin_type'/account'
-    // Derive m/32'
-    auto m_32h = m.Derive(32 | ZIP32_HARDENED_KEY_LIMIT);
-    // Derive m/32'/coin_type'
-    auto m_32h_cth = m_32h.Derive(bip44CoinType | ZIP32_HARDENED_KEY_LIMIT);
-
-    // Derive m/32'/coin_type'/0'
-    libzcash::SaplingExtendedSpendingKey xsk = m_32h_cth.Derive(0 | ZIP32_HARDENED_KEY_LIMIT);
-
-    libzcash::SaplingPaymentAddress toAddress = xsk.DefaultAddress();
-
-    if (!HaveSpendingKeyForPaymentAddress(pwalletMain)(toAddress)) {
-        // Sapling account 0 must be the first address returned by GenerateNewSaplingZKey
-        assert(pwalletMain->GenerateNewSaplingZKey() == toAddress);
+    auto usk = pwalletMain->GetUnifiedSpendingKeyForAccount(0);
+    assert(usk.has_value()); // mnemonic seeds are currently always generated to have valid USKs at account 0
+    auto ua = usk.value().ToFullViewingKey().FindAddress(libzcash::diversifier_index_t(0));
+    auto addr = ua.first.GetSaplingPaymentAddress();
+    if (addr.has_value()) {
+        return addr.value();
+    } else {
+        // This error will only occur if Sapling address generation has been disbled for USKs from this
+        // wallet.
+        throw std::runtime_error(std::string(__func__) + ": No Sapling address generated for account 0.");
     }
-
-    return toAddress;
 }
 
 void AsyncRPCOperation_saplingmigration::cancel() {
