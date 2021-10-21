@@ -1,0 +1,76 @@
+## Mac OS X Debugging
+
+The following document contains instructions for debugging `zcashd` on OSX. The instructions below were what worked for my machine which is a Mid-2013 MacBook Air running OS `10.14.5` with 4 GB RAM.
+
+### 1. Build zcash
+
+- Follow instructions from zcash docs for building zcash from source: https://zcash.readthedocs.io/en/latest/rtd_pages/macOS-build.html
+- Instead of `./zcutil/build.sh -j$(sysctl -n hw.ncpu)`, I need to run  `./zcutil/build.sh -j2` as building with a concurrency level of 4 causes deadlocks on my machine.
+- Specify the following environment variable `CONFIGURE_FLAGS='CXXFLAGS=-O0'`
+- My full command looks like: `CONFIGURE_FLAGS='CXXFLAGS=-O0' ./zcutil/build.sh -j2`
+- Note that when you update cpp code, you don't have to run this command again. You can simply run `make` to compile your code.
+
+### 2. Create a Configuration
+
+- By default, Zcash looks for my configuration in `"$HOME/Library/Application\ Support/Zcash/zcash.conf"`, so put a configuration file here. Here's what my configuration file looks like: 
+
+```
+regtest=1 # Run in the regtest environment
+gen=1 # Enable mining
+txindex=1 # Maintain a full transaction index
+genproclimit=1 # Use 1 thread for coin generation
+printtoconsole=1 # Log out to console instead of a debug.log file
+```
+
+### 3. Run zcashd without debugging
+
+Verify that you can run zcashd without debugging.
+
+- From terminal: `./src/zcashd`
+- Once your program has booted up, fire an rpc call to ensure the program started successfully:
+```
+=>./src/zcash-cli getblockcount
+2
+```
+
+### 4. Download Visual Studio
+
+https://code.visualstudio.com/download
+
+### 5. Download the C++ VS Code Extension
+
+Extension id: ms-vscode.cpptools
+
+### 6. Create a launch.json
+
+Create a file called `./vscode/launch.json`. See below for what mine looks like. Change the `$HOME` environment variable to be whatever the output of `echo $HOME` is in your terminal.
+
+```
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(lldb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/src/zcashd",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [
+                {"name": "HOME", "value": "/Users/rkass"}
+            ],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        }
+    ]
+}
+```
+
+### Debug
+
+- Click `Run and Debug` along the left hand side of your VS code window
+- To verify, once your program is running, put a breakpoint in an RPC handler, for example try adding a breakpoint to `getblockcount` in `src/rpc/blockchain.cpp` and invoking the same rpc method as we did above: `./src/zcash-cli getblockcount`. Verify that your breakpoint is hit.
