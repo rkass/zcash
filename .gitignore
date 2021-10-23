@@ -59,7 +59,6 @@ src/univalue/gen
 *.lib
 *.pb.cc
 *.pb.h
-.vscode
 
 *.log
 *.trs
