@@ -20,6 +20,9 @@ gen=1 # Enable mining
 txindex=1 # Maintain a full transaction index
 genproclimit=1 # Use 1 thread for coin generation
 printtoconsole=1 # Log out to console instead of a debug.log file
+rpcport=8232 # define port to expose rpc on
+rpcuser=test # for dev, change when going to prod
+rpcpassword=pw # for dev, change when going to prod
 ```
 
 ### 3. Run zcashd without debugging
