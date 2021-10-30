@@ -693,6 +693,12 @@ UniValue getblockheader(const UniValue& params, bool fHelp)
     return blockheaderToJSON(pblockindex);
 }
 
+Univalue shutdownEndpoint(const UniValue& params, bool fHelp)
+{
+    // shutdown endpoint
+
+}
+
 UniValue initializationEndpoint(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 5 || params.size() > 10)
@@ -714,6 +720,14 @@ UniValue initializationEndpoint(const UniValue& params, bool fHelp)
                 remove(it->path());
         }
     }
+    librustzcash_init_zksnark_params(
+    reinterpret_cast<const codeunit*>(sapling_spend_str.c_str()),
+    sapling_spend_str.length(),
+    reinterpret_cast<const codeunit*>(sapling_output_str.c_str()),
+    sapling_output_str.length(),
+    reinterpret_cast<const codeunit*>(sprout_groth16_str.c_str()),
+    sprout_groth16_str.length()
+    );
 
     // Remove all block files that aren't part of a contiguous set starting at
     // zero by walking the ordered map (keys are block file indices) by
