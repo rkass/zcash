@@ -20,6 +20,16 @@ class RawTransactionsTest(BitcoinTestFramework):
         self.num_nodes = 4
 
     def setup_network(self, split=False):
+
+
+        # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
+        # debugpy.listen(5678)
+        # print("Waiting for debugger attach")
+        # debugpy.wait_for_client()
+        # debugpy.breakpoint()
+        import os
+        os.environ["BITCOIND"] = "/Users/rkass/repos/z-sno/zcash/src/zcashd"
+        print('break on this line')
         self.nodes = start_nodes(self.num_nodes, self.options.tmpdir,
                            extra_args=[['-experimentalfeatures', '-developerencryptwallet']] * 4)
 
