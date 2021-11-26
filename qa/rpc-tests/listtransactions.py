@@ -38,6 +38,7 @@ class ListTransactionsTest(BitcoinTestFramework):
 
     def run_test(self):
         # Simple send, 0 to 1:
+        x = self.nodes[0].generateAndReturn()
         txid = self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 0.1)
         self.sync_all()
         check_array_result(self.nodes[0].listtransactions(),
@@ -48,7 +49,7 @@ class ListTransactionsTest(BitcoinTestFramework):
                            {"category":"receive","amount":Decimal("0.1"),"amountZat":10000000,"confirmations":0})
 
         # mine a block, confirmations should change:
-        self.nodes[0].generate(1)
+        self.nodes[0].generate(19)
         self.sync_all()
         check_array_result(self.nodes[0].listtransactions(),
                            {"txid":txid},

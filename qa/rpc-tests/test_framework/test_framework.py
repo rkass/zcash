@@ -32,6 +32,8 @@ from .util import (
 class BitcoinTestFramework(object):
 
     def __init__(self):
+        import os
+        os.environ["BITCOIND"] = "/Users/rkass/repos/z-sno/zcash/src/zcashd"
         self.num_nodes = 4
         self.setup_clean_chain = False
         self.nodes = None

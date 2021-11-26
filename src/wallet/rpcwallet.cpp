@@ -2902,6 +2902,7 @@ UniValue zc_raw_keygen(const UniValue& params, bool fHelp)
 
 UniValue z_getnewaddress(const UniValue& params, bool fHelp)
 {
+    printf("in get z new address");
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 

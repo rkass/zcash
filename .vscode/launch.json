@@ -16,7 +16,96 @@
                 {"name": "HOME", "value": "/Users/rkass"}
             ],
             "externalConsole": false,
+            "MIMode": "lldb",
+            "logging": {"trace": true, "engineLogging": true, "traceResponse": true}
+
+        },
+        {
+            "name": "(lldb) Launch python test params",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/src/zcashd",
+            "args": ["--datadir=/var/folders/wj/btj3l1l162795m8fvwqv4mpr0000gn/T/testm7_5rcfr/318/node0", "-keypool=1", "-discover=0", "-rest", "-nuparams=5ba81b19:1", "-nuparams=76b809bb:1"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [
+                {"name": "HOME", "value": "/Users/rkass"}
+            ],
+            "externalConsole": false,
             "MIMode": "lldb"
+        },
+        {
+            "name": "gdb Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd",
+            "args": ["-datadir=/var/folders/wj/btj3l1l162795m8fvwqv4mpr0000gn/T/testpb__83j5/318/node0", "-keypool=1", "-discover=0", "-rest", "-nuparams=5ba81b19:1", "-nuparams=76b809bb:1"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            // "environment": [
+            //     {"name": "HOME", "value": "/Users/rkass"}
+            // ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "processId": "${command:pickProcess}",
+            "logging": {"trace": true, "engineLogging": true, "traceResponse": true}
+        },
+        {
+            "name": "(lldb) Attach",
+            "type": "lldb",
+            "request": "attach",
+            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd_debug",
+            "args": ["-keypool=1", "-discover=0", "-rest", "-nuparams=5ba81b19:1", "-nuparams=76b809bb:1"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            // "environment": [
+            //     {"name": "HOME", "value": "/Users/rkass"}
+            // ],
+            "externalConsole": true,
+            "MIMode": "lldb",
+            "processId": "${command:pickProcess}",
+            "logging": {"trace": true, "engineLogging": true, "traceResponse": true}
+        },
+        {
+            "name": "rpc tests",
+            "request": "launch",
+            "type": "python",
+            "program": "${workspaceRoot}/qa/pull-tester/rpc-tests.py",
+            "args": ["fundrawtransaction"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [
+                {"name": "HOME", "value": "/Users/rkass"}
+            ],
+            "externalConsole": false
+        },
+        {
+            "name": "wallet_z_sendmany.py",
+            "request": "launch",
+            "type": "python",
+            "program": "/Users/rkass/repos/z-sno/zcash/qa/rpc-tests/wallet_z_sendmany.py",
+            "args": ["--srcdir=/Users/rkass/repos/z-sno/zcash/src",
+                "--cachedir=/Users/rkass/repos/z-sno/zcash/qa2/cache", "--portseed=318"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [
+                {"name": "HOME", "value": "/Users/rkass"}
+            ],
+            "externalConsole": false
+        },
+        {
+            "name": "listtransactions.py",
+            "request": "launch",
+            "type": "python",
+            "program": "/Users/rkass/repos/z-sno/zcash/qa/rpc-tests/listtransactions.py",
+            "args": ["--srcdir=/Users/rkass/repos/z-sno/zcash/src",
+                "--cachedir=/Users/rkass/repos/z-sno/zcash/qa/cache", "--portseed=318"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [
+                {"name": "HOME", "value": "/Users/rkass"}
+            ],
+            "externalConsole": false
         }
     ]
 }

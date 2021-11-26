@@ -9,8 +9,10 @@
 #include "consensus/funding.h"
 #include "consensus/validation.h"
 #include "core_io.h"
+
 #ifdef ENABLE_MINING
 #include "crypto/equihash.h"
+
 #endif
 #include "init.h"
 #include "key_io.h"
@@ -19,6 +21,7 @@
 #include "miner.h"
 #include "net.h"
 #include "pow.h"
+#include "serialize.h"
 #include "rpc/server.h"
 #include "txmempool.h"
 #include "util.h"
@@ -259,6 +262,202 @@ endloop:
         CValidationState state;
         if (!ProcessNewBlock(state, Params(), NULL, pblock, true, NULL))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+
+
+        if (params.size() == 19 || true) {
+            uint256 hash = pblock->GetHash();
+            BlockMap::iterator mi = mapBlockIndex.find(hash);
+            // CBlockIndex pindex;
+            // if (mi != mapBlockIndex.end()) 
+            //     *pindex = mi->second;
+            CDiskBlockPos pos =  mi->second->GetBlockPos();
+            WriteBlockToDiskAvax(*pblock, pos);
+            // this works. now need to write function to 
+            // return block string and function to read in block
+            // string and validate equality
+        }
+        ++nHeight;
+        blockHashes.push_back(pblock->GetHash().GetHex());
+
+        //mark miner address as important because it was used at least for one coinbase output
+        std::visit(KeepMinerAddress(), minerAddress);
+    }
+    return blockHashes;
+}
+
+CBlock blockFromUnivalue(const UniValue& params) {
+    size_t i = 0;
+    CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
+
+    while(true) {
+        if (params.size() <= i)
+            break;
+        const char x = params[i].get_int();
+        ssq << x;
+        i++;
+    }
+
+    CBlock b;
+    b.SetNull();
+    ssq >> b;
+    return b;
+}
+
+
+UniValue univalueFromBlock(const CBlock& block) {
+    UniValue ret(UniValue::VARR);
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << block;
+    std::vector<unsigned char> data(ss.begin(), ss.end());
+    for (unsigned char xx : data) {
+        ret.push_back(xx);
+    }
+    return ret;
+}
+
+UniValue generateAndReturn(const UniValue& params, bool fHelp)
+{
+     if (!Params().MineBlocksOnDemand())
+        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
+
+    if (params.size() > 1) {
+
+        // size_t i = 0;
+        // CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
+
+        // while(true) {
+        //     if (params.size() <= i)
+        //         break;
+        //     const char x = params[i].get_int();
+        //     ssq << x;
+        //     i++;
+        // }
+
+        // CBlock b2;
+        // b2.SetNull();
+        // ssq >> b2;
+        std::string x = "x";
+        CBlock b2 = blockFromUnivalue(params);
+        return UniValue(x);
+    }
+    int nHeightStart = 0;
+    int nHeightEnd = 0;
+    int nHeight = 0;
+    int nGenerate = 1;
+
+    MinerAddress minerAddress;
+    GetMainSignals().AddressForMining(minerAddress);
+
+    // If the keypool is exhausted, no script is returned at all.  Catch this.
+    auto resv = std::get_if<boost::shared_ptr<CReserveScript>>(&minerAddress);
+    if (resv && !resv->get()) {
+        throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+    }
+
+    // Throw an error if no address valid for mining was provided.
+    if (!std::visit(IsValidMinerAddress(), minerAddress)) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "No miner address available (mining requires a wallet or -mineraddress)");
+    }
+
+    {   // Don't keep cs_main locked
+        LOCK(cs_main);
+        nHeightStart = chainActive.Height();
+        nHeight = nHeightStart;
+        nHeightEnd = nHeightStart+nGenerate;
+    }
+    unsigned int nExtraNonce = 0;
+    UniValue blockHashes(UniValue::VARR);
+    unsigned int n = Params().GetConsensus().nEquihashN;
+    unsigned int k = Params().GetConsensus().nEquihashK;
+    while (nHeight < nHeightEnd)
+    {
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(Params(), minerAddress));
+        if (!pblocktemplate.get())
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
+        CBlock *pblock = &pblocktemplate->block;
+        {
+            LOCK(cs_main);
+            IncrementExtraNonce(pblocktemplate.get(), chainActive.Tip(), nExtraNonce, Params().GetConsensus());
+        }
+
+        // Hash state
+        eh_HashState eh_state;
+        EhInitialiseState(n, k, eh_state);
+
+        // I = the block header minus nonce and solution.
+        CEquihashInput I{*pblock};
+        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+        ss << I;
+
+        // H(I||...
+        eh_state.Update((unsigned char*)&ss[0], ss.size());
+
+        while (true) {
+            // Yes, there is a chance every nonce could fail to satisfy the -regtest
+            // target -- 1 in 2^(2^256). That ain't gonna happen
+            pblock->nNonce = ArithToUint256(UintToArith256(pblock->nNonce) + 1);
+
+            // H(I||V||...
+            eh_HashState curr_state(eh_state);
+            curr_state.Update(pblock->nNonce.begin(), pblock->nNonce.size());
+
+            // (x_1, x_2, ...) = A(I, V, n, k)
+            std::function<bool(std::vector<unsigned char>)> validBlock =
+                    [&pblock](std::vector<unsigned char> soln) {
+                pblock->nSolution = soln;
+                solutionTargetChecks.increment();
+                return CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus());
+            };
+            bool found = EhBasicSolveUncancellable(n, k, curr_state, validBlock);
+            ehSolverRuns.increment();
+            if (found) {
+                goto endloop;
+            }
+        }
+endloop:
+        CValidationState state;
+        if (!ProcessNewBlock(state, Params(), NULL, pblock, true, NULL))
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+
+        return univalueFromBlock(*pblock);
+        // std::stringstream ststr;
+        // CDataStream sss(SER_NETWORK, PROTOCOL_VERSION);
+        // const CBlock& block = *pblock;
+        // // block.Serialize<std::stringstream>(ststr);
+        // sss << block;
+
+        // CDataStream ss2(SER_NETWORK, PROTOCOL_VERSION);
+        // // block.Serialize<std::stringstream>(ststr);
+        // ss2 << block;
+        // UniValue ret(UniValue::VARR);
+        // std::vector<unsigned char> data(ss2.begin(), ss2.end());
+        // for (unsigned char xx : data) {
+        //     ret.push_back(xx);
+        // }
+
+        // CBlock b2;
+        // b2.SetNull();
+        // ss2 >> b2;
+        
+        // CBlock b2;
+        // b2.SetNull();
+        // sss>>b2;
+        // OverrideStream<const std::stringstream> os = WithVersion<const std::stringstream>(&stringstream, 1);
+
+        // return ret;
+
+        if (params.size() == 19 || true) {
+            uint256 hash = pblock->GetHash();
+            BlockMap::iterator mi = mapBlockIndex.find(hash);
+            // CBlockIndex pindex;
+            // if (mi != mapBlockIndex.end()) 
+            //     *pindex = mi->second;
+            CDiskBlockPos pos =  mi->second->GetBlockPos();
+            WriteBlockToDiskAvax(*pblock, pos);
+            // this works. now need to write function to 
+            // return block string and function to read in block
+            // string and validate equality
+        }
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
 
@@ -1032,6 +1231,8 @@ static const CRPCCommand commands[] =
     { "generating",         "getgenerate",            &getgenerate,            true  },
     { "generating",         "setgenerate",            &setgenerate,            true  },
     { "generating",         "generate",               &generate,               true  },
+    { "generating",         "generateAndReturn",      &generateAndReturn,               true  },
+
 #endif
 
     { "util",               "estimatefee",            &estimatefee,            true  },

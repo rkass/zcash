@@ -183,7 +183,7 @@ def initialize_datadir(dirname, n):
     return datadir
 
 def rpc_auth_pair(n):
-    return 'rpcuser💻' + str(n), 'rpcpass🔑' + str(n)
+    return 'rpcuser' + str(n), 'rpcpass' + str(n)
 
 def rpc_url(i, rpchost=None):
     rpc_u, rpc_p = rpc_auth_pair(i)
@@ -354,6 +354,8 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "bitcoind")
+    if i == 0:
+        binary = binary.replace("zcashd", "zcashd_debug")
     args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest" ]
     args.extend([
         '-nuparams=5ba81b19:1', # Overwinter
