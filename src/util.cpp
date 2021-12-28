@@ -671,3 +671,24 @@ int GetNumCores()
 {
     return boost::thread::physical_concurrency();
 }
+
+bool EnvVarBool(const char* envVar) {
+    const char* val = getenv(envVar);
+    return val != NULL && 
+        (strcmp(val, "1") == 0 || strcmp(val, "true") == 0 || strcmp(val, "TRUE") == 0);
+}
+
+bool ShouldDisablePOW()
+{
+    return EnvVarBool("DISABLE_POW");
+}
+
+bool ShouldNotSolvePOW()
+{
+    return ShouldDisablePOW() || EnvVarBool("DISABLE_POW_SOLVE");
+}
+
+bool ShouldNotVerifyPOW()
+{
+    return ShouldDisablePOW() || EnvVarBool("DISABLE_POW_VERIFY");
+}

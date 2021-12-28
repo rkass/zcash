@@ -12,6 +12,7 @@
 #include "primitives/block.h"
 #include "streams.h"
 #include "uint256.h"
+#include "util.h"
 
 #include <librustzcash.h>
 
@@ -104,6 +105,10 @@ unsigned int CalculateNextWorkRequired(arith_uint256 bnAvg,
 
 bool CheckEquihashSolution(const CBlockHeader *pblock, const Consensus::Params& params)
 {
+
+    if (ShouldNotVerifyPOW()) {
+        return true;
+    }
     unsigned int n = params.nEquihashN;
     unsigned int k = params.nEquihashK;
 
@@ -122,6 +127,9 @@ bool CheckEquihashSolution(const CBlockHeader *pblock, const Consensus::Params& 
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
 {
+    if (ShouldNotVerifyPOW()) {
+        return true;
+    }
     bool fNegative;
     bool fOverflow;
     arith_uint256 bnTarget;

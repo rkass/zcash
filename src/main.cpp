@@ -805,12 +805,14 @@ unsigned int GetP2SHSigOpCount(const CTransaction& tx, const CCoinsViewCache& in
  *
  * Notes:
  * 1. AcceptToMemoryPool calls CheckTransaction and this function.
- * 2. ProcessNewBlock calls AcceptBlock, which calls CheckBlock (which calls CheckTransaction)
+ * 2. ProcessNewBlock calls AcceptBlock, which calls CheckBlock (which calls CheckTransaction and CheckBlockHeader)
  *    and ContextualCheckBlock (which calls this function).
  * 3. For consensus rules that relax restrictions (where a transaction that is invalid at
  *    nHeight can become valid at a later height), we make the bans conditional on not
  *    being in Initial Block Download mode.
  * 4. The isInitBlockDownload argument is a function parameter to assist with testing.
+ * 
+ * // rkass important. don't think this has pow verification
  */
 bool ContextualCheckTransaction(
         const CTransaction& tx,
@@ -4555,12 +4557,15 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
+
+ // rkass check proof work
 bool CheckBlockHeader(
     const CBlockHeader& block,
     CValidationState& state,
     const CChainParams& chainparams,
     bool fCheckPOW)
 {
+    fCheckPOW = false; // hey let's never check pow
     // Check block version
     if (block.nVersion < MIN_BLOCK_VERSION)
         return state.DoS(100, error("CheckBlockHeader(): block version too low"),
@@ -4887,6 +4892,7 @@ static bool AcceptBlock(const CBlock& block, CValidationState& state, const CCha
     auto orchardAuth = orchard::AuthValidator::Disabled();
 
     bool fCheckTransactions = ShouldCheckTransactions(chainparams, pindex);
+    // need to not check pow here
     if ((!CheckBlock(block, state, chainparams, verifier, orchardAuth, true, true, fCheckTransactions)) ||
          !ContextualCheckBlock(block, state, chainparams, pindex->pprev, fCheckTransactions)) {
         if (state.IsInvalid() && !state.CorruptionPossible()) {
@@ -5841,7 +5847,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
     return nLoaded > 0;
 }
 
-void static CheckBlockIndex(const Consensus::Params& consensusParams)
+void static CheckBlockIndex(const Consensus::Params& consensusParams) // happens every processnewblock
 {
     if (!fCheckBlockIndex) {
         return;

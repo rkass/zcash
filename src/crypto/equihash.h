@@ -8,6 +8,8 @@
 
 #include <memory>
 #include <vector>
+#include "util.h"
+
 
 inline constexpr size_t equihash_solution_size(unsigned int N, unsigned int K) {
     return (1 << K)*(N/(K+1)+1)/8;
@@ -245,6 +247,9 @@ inline bool EhBasicSolve(unsigned int n, unsigned int k, const eh_HashState& bas
                     const std::function<bool(std::vector<unsigned char>)> validBlock,
                     const std::function<bool(EhSolverCancelCheck)> cancelled)
 {
+    if (ShouldNotSolvePOW()) {
+        return true;
+    }
     if (n == 96 && k == 3) {
         return Eh96_3.BasicSolve(base_state, validBlock, cancelled);
     } else if (n == 200 && k == 9) {
@@ -265,10 +270,14 @@ inline bool EhBasicSolveUncancellable(unsigned int n, unsigned int k, const eh_H
                         [](EhSolverCancelCheck pos) { return false; });
 }
 
+
 inline bool EhOptimisedSolve(unsigned int n, unsigned int k, const eh_HashState& base_state,
                     const std::function<bool(std::vector<unsigned char>)> validBlock,
                     const std::function<bool(EhSolverCancelCheck)> cancelled)
 {
+    if (ShouldNotSolvePOW()) {
+        return true;
+    }
     if (n == 96 && k == 3) {
         return Eh96_3.OptimisedSolve(base_state, validBlock, cancelled);
     } else if (n == 200 && k == 9) {
