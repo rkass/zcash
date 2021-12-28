@@ -2329,6 +2329,10 @@ bool IsInitialBlockDownload(const Consensus::Params& params)
             }
         }
     }
+    int64_t blockTime = chainActive.Tip()->GetBlockTime();
+    int64_t now = GetTime();
+    int64_t maxAge = nMaxTipAge;
+    int64_t minDate = now - maxAge;
     if (chainActive.Tip()->GetBlockTime() < (GetTime() - nMaxTipAge))
         return true;
     LogPrintf("Leaving InitialBlockDownload (latching to false)\n");

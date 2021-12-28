@@ -221,6 +221,11 @@ UniValue generate(const UniValue& params, bool fHelp)
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
+        // CBlockHeader thisHeader = b2.GetBlockHeader();
+        auto date = DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pblock->GetBlockTime());
+            TracingInfo("mining", "Generate: new block",
+
+        "date", date.c_str());
         {
             LOCK(cs_main);
             IncrementExtraNonce(pblocktemplate.get(), chainActive.Tip(), nExtraNonce, Params().GetConsensus());
@@ -1013,34 +1018,32 @@ protected:
 
 UniValue submitblock(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
-            "submitblock \"hexdata\" ( \"jsonparametersobject\" )\n"
-            "\nAttempts to submit new block to network.\n"
-            "The 'jsonparametersobject' parameter is currently ignored.\n"
-            "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\n"
+    // if (fHelp || params.size() < 1 || params.size() > 2)
+    //     throw runtime_error(
+    //         "submitblock \"hexdata\" ( \"jsonparametersobject\" )\n"
+    //         "\nAttempts to submit new block to network.\n"
+    //         "The 'jsonparametersobject' parameter is currently ignored.\n"
+    //         "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\n"
 
-            "\nArguments\n"
-            "1. \"hexdata\"    (string, required) the hex-encoded block data to submit\n"
-            "2. \"jsonparametersobject\"     (string, optional) object of optional parameters\n"
-            "    {\n"
-            "      \"workid\" : \"id\"    (string, optional) if the server provided a workid, it MUST be included with submissions\n"
-            "    }\n"
-            "\nResult:\n"
-            "\"duplicate\" - node already has valid copy of block\n"
-            "\"duplicate-invalid\" - node already has block, but it is invalid\n"
-            "\"duplicate-inconclusive\" - node already has block but has not validated it\n"
-            "\"inconclusive\" - node has not validated the block, it may not be on the node's current best chain\n"
-            "\"rejected\" - block was rejected as invalid\n"
-            "For more information on submitblock parameters and results, see: https://github.com/bitcoin/bips/blob/master/bip-0022.mediawiki#block-submission\n"
-            "\nExamples:\n"
-            + HelpExampleCli("submitblock", "\"mydata\"")
-            + HelpExampleRpc("submitblock", "\"mydata\"")
-        );
+    //         "\nArguments\n"
+    //         "1. \"hexdata\"    (string, required) the hex-encoded block data to submit\n"
+    //         "2. \"jsonparametersobject\"     (string, optional) object of optional parameters\n"
+    //         "    {\n"
+    //         "      \"workid\" : \"id\"    (string, optional) if the server provided a workid, it MUST be included with submissions\n"
+    //         "    }\n"
+    //         "\nResult:\n"
+    //         "\"duplicate\" - node already has valid copy of block\n"
+    //         "\"duplicate-invalid\" - node already has block, but it is invalid\n"
+    //         "\"duplicate-inconclusive\" - node already has block but has not validated it\n"
+    //         "\"inconclusive\" - node has not validated the block, it may not be on the node's current best chain\n"
+    //         "\"rejected\" - block was rejected as invalid\n"
+    //         "For more information on submitblock parameters and results, see: https://github.com/bitcoin/bips/blob/master/bip-0022.mediawiki#block-submission\n"
+    //         "\nExamples:\n"
+    //         + HelpExampleCli("submitblock", "\"mydata\"")
+    //         + HelpExampleRpc("submitblock", "\"mydata\"")
+    //     );
 
-    CBlock block;
-    if (!DecodeHexBlk(block, params[0].get_str()))
-        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
+    const CBlock block = blockFromUnivalue(params);
 
     uint256 hash = block.GetHash();
     bool fBlockPresent = false;
@@ -1078,14 +1081,6 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     return BIP22ValidationResult(state);
 }
 
-UniValue acceptBlock(const UniValue& params, bool fHelp)
-{
-    const CBlock b2 = blockFromUnivalue(params);
-    CValidationState state;
-    ProcessNewBlock(state, Params(), NULL, &b2, true, NULL);
-    return BIP22ValidationResult(state);
-}
-
 UniValue validateBlock(const UniValue& params, bool fHelp)
 {
     const CBlock b2 = blockFromUnivalue(params);
@@ -1102,6 +1097,16 @@ UniValue validateBlock(const UniValue& params, bool fHelp)
         return "inconclusive-not-best-prevblk";
     TestBlockValidity(state, Params(), b2, pindexPrev, true);
     return BIP22ValidationResult(state);
+}
+
+UniValue prevBlockTimeAndHash(const UniValue& params, bool fHelp)
+{
+    CBlockIndex* const pindexPrev = chainActive.Tip();
+    int64_t t = chainActive.Tip()->GetBlockTime();
+    uint256 actualPrevBlockHash = pindexPrev->GetBlockHash();
+    // std::stringstream ss;
+    // ss << actualPrevBlockHash;
+    return std::to_string(t) + "...........";
 }
 
 UniValue estimatefee(const UniValue& params, bool fHelp)
@@ -1269,8 +1274,7 @@ static const CRPCCommand commands[] =
     { "generating",         "generate",               &generate,               true  },
     { "generating",         "generateAndReturn",      &generateAndReturn,               true  },
     { "generating",         "validateBlock",          &validateBlock,           true}, // todo -- category is incorrect
-    { "generating",         "acceptBlock",          &acceptBlock,           true}, // todo -- category is incorrect
-
+    {"generating", "prevBlockTimeAndHash", &prevBlockTimeAndHash, true},
 
 
     { "util",               "estimatefee",            &estimatefee,            true  },
