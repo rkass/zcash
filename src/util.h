@@ -171,6 +171,15 @@ std::string HelpMessageOpt(const std::string& option, const std::string& message
  */
 int GetNumCores();
 
+bool ShouldNotSolvePOW();
+
+bool ShouldNotVerifyPOW();
+
+bool ShouldDisablePOW();
+
+bool EnvVarBool(char* envVar);
+
+
 void SetThreadPriority(int nPriority);
 void RenameThread(const char* name);
 

@@ -38,6 +38,8 @@
 
 #include <univalue.h>
 
+#include <test/test_util.h>
+
 using namespace std;
 
 /**
@@ -321,6 +323,13 @@ UniValue generateAndReturn(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
 
     if (params.size() > 1) {
+        // std::string jsonparams = params[0].get_str();
+        // UniValue jobj = read_json(jsonparams);
+        // for (size_t idx = 0; idx < jobj.size(); idx++) {
+        //     UniValue test = jobj[idx];
+        //     int x = 3;
+        // }
+
 
         // size_t i = 0;
         // CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
@@ -336,6 +345,7 @@ UniValue generateAndReturn(const UniValue& params, bool fHelp)
         // CBlock b2;
         // b2.SetNull();
         // ssq >> b2;
+
         std::string x = "x";
         CBlock b2 = blockFromUnivalue(params);
         return UniValue(x);
@@ -1068,6 +1078,32 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     return BIP22ValidationResult(state);
 }
 
+UniValue acceptBlock(const UniValue& params, bool fHelp)
+{
+    const CBlock b2 = blockFromUnivalue(params);
+    CValidationState state;
+    ProcessNewBlock(state, Params(), NULL, &b2, true, NULL);
+    return BIP22ValidationResult(state);
+}
+
+UniValue validateBlock(const UniValue& params, bool fHelp)
+{
+    const CBlock b2 = blockFromUnivalue(params);
+    CValidationState state;
+    CBlockIndex* const pindexPrev = chainActive.Tip();
+    // TestBlockValidity only supports blocks built on the current Tip
+    uint256 thisPrevBlock = b2.hashPrevBlock;
+    CBlockHeader thisHeader = b2.GetBlockHeader();
+    uint256 thisHash = thisHeader.GetHash();
+    uint256 actualPrevBlock = pindexPrev->GetBlockHash();
+    if (thisHash == actualPrevBlock)
+        return "i-am-block-producer";
+    if (thisPrevBlock != actualPrevBlock)
+        return "inconclusive-not-best-prevblk";
+    TestBlockValidity(state, Params(), b2, pindexPrev, true);
+    return BIP22ValidationResult(state);
+}
+
 UniValue estimatefee(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
@@ -1227,13 +1263,15 @@ static const CRPCCommand commands[] =
     { "mining",             "submitblock",            &submitblock,            true  },
     { "mining",             "getblocksubsidy",        &getblocksubsidy,        true  },
 
-#ifdef ENABLE_MINING
+
     { "generating",         "getgenerate",            &getgenerate,            true  },
     { "generating",         "setgenerate",            &setgenerate,            true  },
     { "generating",         "generate",               &generate,               true  },
     { "generating",         "generateAndReturn",      &generateAndReturn,               true  },
+    { "generating",         "validateBlock",          &validateBlock,           true}, // todo -- category is incorrect
+    { "generating",         "acceptBlock",          &acceptBlock,           true}, // todo -- category is incorrect
 
-#endif
+
 
     { "util",               "estimatefee",            &estimatefee,            true  },
     { "util",               "estimatepriority",       &estimatepriority,       true  },

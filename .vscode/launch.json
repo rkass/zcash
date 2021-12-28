@@ -35,26 +35,26 @@
             "MIMode": "lldb"
         },
         {
-            "name": "gdb Attach",
-            "type": "cppdbg",
+            "name": "(lldb) Attach",
+            "type": "lldb",
             "request": "attach",
-            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd",
-            "args": ["-datadir=/var/folders/wj/btj3l1l162795m8fvwqv4mpr0000gn/T/testpb__83j5/318/node0", "-keypool=1", "-discover=0", "-rest", "-nuparams=5ba81b19:1", "-nuparams=76b809bb:1"],
+            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd_debug",
+            "args": ["-keypool=1", "-discover=0", "-rest", "-nuparams=5ba81b19:1", "-nuparams=76b809bb:1"],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             // "environment": [
             //     {"name": "HOME", "value": "/Users/rkass"}
             // ],
-            "externalConsole": false,
-            "MIMode": "gdb",
+            "externalConsole": true,
+            "MIMode": "lldb",
             "processId": "${command:pickProcess}",
             "logging": {"trace": true, "engineLogging": true, "traceResponse": true}
         },
         {
-            "name": "(lldb) Attach",
+            "name": "(lldb) Attach 2",
             "type": "lldb",
             "request": "attach",
-            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd_debug",
+            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd_debug2",
             "args": ["-keypool=1", "-discover=0", "-rest", "-nuparams=5ba81b19:1", "-nuparams=76b809bb:1"],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
