@@ -652,7 +652,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const MinerAddre
         } else {
             pblock->hashBlockCommitments = sapling_tree.root();
         }
-        UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
+        UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev); 
         pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
         pblock->nSolution.clear();
         pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
