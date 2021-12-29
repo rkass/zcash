@@ -117,6 +117,7 @@ struct CNodeSignals
 {
     boost::signals2::signal<int ()> GetHeight;
     boost::signals2::signal<bool (const CChainParams&, CNode*), CombinerAll> ProcessMessages;
+    boost::signals2::signal<bool (const CChainParams& chainparams, CTransaction tx, int64_t nTimeReceived)> ReceiveTx;
     boost::signals2::signal<bool (const Consensus::Params&, CNode*), CombinerAll> SendMessages;
     boost::signals2::signal<void (NodeId, const CNode*)> InitializeNode;
     boost::signals2::signal<void (NodeId)> FinalizeNode;

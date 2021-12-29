@@ -82,6 +82,7 @@ public:
     AsyncRPCOperation_sendmany& operator=(AsyncRPCOperation_sendmany &&) = delete;      // Move assign
 
     virtual void main();
+    CTransaction main_impl_return();
 
     virtual UniValue getStatus() const;
 
@@ -182,6 +183,10 @@ public:
 
     bool main_impl() {
         return delegate->main_impl();
+    }
+
+    CTransaction main_impl_return() {
+        return delegate->main_impl_return();
     }
 
     UniValue perform_joinsplit(AsyncJoinSplitInfo &info) {
