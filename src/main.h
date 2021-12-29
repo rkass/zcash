@@ -262,6 +262,8 @@ bool LoadBlockIndex();
 void UnloadBlockIndex();
 /** Process protocol messages received from a given node */
 bool ProcessMessages(const CChainParams& chainparams, CNode* pfrom);
+
+bool ReceiveTx(const CChainParams& chainparams, CTransaction tx, int64_t nTimeReceived);
 /**
  * Send queued protocol messages to be sent to a give node.
  *
@@ -536,6 +538,8 @@ bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex);
 
 /** The currently-connected chain of blocks (protected by cs_main). */
 extern CChain chainActive;
+
+// extern bool static ReceiveTx;
 
 /** Global variable that points to the active CCoinsView (protected by cs_main) */
 extern CCoinsViewCache *pcoinsTip;

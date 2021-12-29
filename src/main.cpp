@@ -593,6 +593,7 @@ void RegisterNodeSignals(CNodeSignals& nodeSignals)
 {
     nodeSignals.GetHeight.connect(&GetHeight);
     nodeSignals.ProcessMessages.connect(&ProcessMessages);
+    nodeSignals.ReceiveTx.connect(&ReceiveTx);
     nodeSignals.SendMessages.connect(&SendMessages);
     nodeSignals.InitializeNode.connect(&InitializeNode);
     nodeSignals.FinalizeNode.connect(&FinalizeNode);
@@ -602,6 +603,7 @@ void UnregisterNodeSignals(CNodeSignals& nodeSignals)
 {
     nodeSignals.GetHeight.disconnect(&GetHeight);
     nodeSignals.ProcessMessages.disconnect(&ProcessMessages);
+    nodeSignals.ReceiveTx.disconnect(&ReceiveTx);
     nodeSignals.SendMessages.disconnect(&SendMessages);
     nodeSignals.InitializeNode.disconnect(&InitializeNode);
     nodeSignals.FinalizeNode.disconnect(&FinalizeNode);
@@ -6264,6 +6266,143 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
     }
 }
 
+bool static StaticReceiveTx(const CChainParams& chainparams, CTransaction tx, int64_t nTimeReceived)
+{
+
+    if (!IsInitialBlockDownload(chainparams.GetConsensus()))
+    {
+        // Stop processing the transaction early if
+        // We are in blocks only mode and peer is either not whitelisted or whitelistrelay is off
+        // if (GetBoolArg("-blocksonly", DEFAULT_BLOCKSONLY) && (!pfrom->fWhitelisted || !GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY)))
+        // {
+        //     LogPrint("net", "transaction sent in violation of protocol peer=%d\n", pfrom->id);
+        //     return true;
+        // }
+
+        vector<uint256> vWorkQueue;
+        vector<uint256> vEraseQueue;
+
+        const uint256& txid = tx.GetHash();
+        const WTxId& wtxid = tx.GetWTxId();
+
+        LOCK(cs_main);
+
+
+        bool fMissingInputs = false;
+        CValidationState state;
+
+
+
+        // We do the AlreadyHave() check using a MSG_WTX inv unconditionally,
+        // because for pre-v5 transactions wtxid.authDigest is set to the same
+        // placeholder as is used for the CInv.hashAux field for MSG_TX.
+        if (!AlreadyHave(CInv(MSG_WTX, txid, wtxid.authDigest)) &&
+            AcceptToMemoryPool(chainparams, mempool, state, tx, true, &fMissingInputs))
+        {
+            mempool.check(pcoinsTip);
+            RelayTransaction(tx);
+            vWorkQueue.push_back(txid);
+            // Recursively process any orphan transactions that depended on this one
+            set<NodeId> setMisbehaving;
+            for (unsigned int i = 0; i < vWorkQueue.size(); i++)
+            {
+                map<uint256, set<uint256> >::iterator itByPrev = mapOrphanTransactionsByPrev.find(vWorkQueue[i]);
+                if (itByPrev == mapOrphanTransactionsByPrev.end())
+                    continue;
+                for (set<uint256>::iterator mi = itByPrev->second.begin();
+                     mi != itByPrev->second.end();
+                     ++mi)
+                {
+                    const uint256& orphanHash = *mi;
+                    const CTransaction& orphanTx = mapOrphanTransactions[orphanHash].tx;
+                    NodeId fromPeer = mapOrphanTransactions[orphanHash].fromPeer;
+                    bool fMissingInputs2 = false;
+                    // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan
+                    // resolution (that is, feeding people an invalid transaction based on LegitTxX in order to get
+                    // anyone relaying LegitTxX banned)
+                    CValidationState stateDummy;
+
+
+                    if (setMisbehaving.count(fromPeer))
+                        continue;
+                    if (AcceptToMemoryPool(chainparams, mempool, stateDummy, orphanTx, true, &fMissingInputs2))
+                    {
+                        LogPrint("mempool", "   accepted orphan tx %s\n", orphanHash.ToString());
+                        RelayTransaction(orphanTx);
+                        vWorkQueue.push_back(orphanHash);
+                        vEraseQueue.push_back(orphanHash);
+                    }
+                    else if (!fMissingInputs2)
+                    {
+                        int nDos = 0;
+                        if (stateDummy.IsInvalid(nDos) && nDos > 0)
+                        {
+                            // Punish peer that gave us an invalid orphan tx
+                            Misbehaving(fromPeer, nDos);
+                            setMisbehaving.insert(fromPeer);
+                            LogPrint("mempool", "   invalid orphan tx %s\n", orphanHash.ToString());
+                        }
+                        // Has inputs but not accepted to mempool
+                        // Probably non-standard or insufficient fee/priority
+                        LogPrint("mempool", "   removed orphan tx %s\n", orphanHash.ToString());
+                        vEraseQueue.push_back(orphanHash);
+                        // Add the wtxid of this transaction to our reject filter.
+                        // Unlike upstream Bitcoin Core, we can unconditionally add
+                        // these, as they are always bound to the entirety of the
+                        // transaction regardless of version.
+                        assert(recentRejects);
+                        recentRejects->insert(orphanTx.GetWTxId().ToBytes());
+                    }
+                    mempool.check(pcoinsTip);
+                }
+            }
+
+            for (uint256 hash : vEraseQueue)
+                EraseOrphanTx(hash);
+        }
+        // TODO: currently, prohibit joinsplits and shielded spends/outputs from entering mapOrphans
+        else if (fMissingInputs &&
+                 tx.vJoinSplit.empty() &&
+                 tx.vShieldedSpend.empty() &&
+                 tx.vShieldedOutput.empty())
+        {
+            // AddOrphanTx(tx, pfrom->GetId());
+
+            // DoS prevention: do not allow mapOrphanTransactions to grow unbounded
+            unsigned int nMaxOrphanTx = (unsigned int)std::max((int64_t)0, GetArg("-maxorphantx", DEFAULT_MAX_ORPHAN_TRANSACTIONS));
+            unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTx);
+            if (nEvicted > 0)
+                LogPrint("mempool", "mapOrphan overflow, removed %u tx\n", nEvicted);
+        } else {
+            // Add the wtxid of this transaction to our reject filter.
+            // Unlike upstream Bitcoin Core, we can unconditionally add
+            // these, as they are always bound to the entirety of the
+            // transaction regardless of version.
+            assert(recentRejects);
+            recentRejects->insert(tx.GetWTxId().ToBytes());
+
+        }
+        int nDoS = 0;
+        if (state.IsInvalid(nDoS))
+        {
+            // LogPrint("mempoolrej", "%s from peer=%d %s was not accepted into the memory pool: %s\n", tx.GetHash().ToString(),
+            //     pfrom->id, pfrom->cleanSubVer,
+            //     FormatStateMessage(state));
+            // if (state.GetRejectCode() < REJECT_INTERNAL) // Never send AcceptToMemoryPool's internal codes over P2P
+            //     pfrom->PushMessage("reject", strCommand, (unsigned char)state.GetRejectCode(),
+            //                        state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), txid);
+            // if (nDoS > 0)
+            //     Misbehaving(pfrom->GetId(), nDoS);
+        }
+    }
+
+
+
+  return true;
+}
+
+
+
 bool static ProcessMessage(const CChainParams& chainparams, CNode* pfrom, string strCommand, CDataStream& vRecv, int64_t nTimeReceived)
 {
     LogPrint("net", "received: %s (%u bytes) peer=%d\n", SanitizeString(strCommand), vRecv.size(), pfrom->id);
@@ -7242,6 +7381,10 @@ bool static ProcessMessage(const CChainParams& chainparams, CNode* pfrom, string
 
 
     return true;
+}
+
+bool ReceiveTx(const CChainParams& chainparams, CTransaction tx, int64_t nTimeReceived){
+    return StaticReceiveTx(chainparams, tx, nTimeReceived);
 }
 
 // requires LOCK(cs_vRecvMsg)

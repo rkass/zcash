@@ -310,7 +310,6 @@ CBlock blockFromUnivalue(const UniValue& params) {
     return b;
 }
 
-
 UniValue univalueFromBlock(const CBlock& block) {
     UniValue ret(UniValue::VARR);
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);

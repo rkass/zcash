@@ -3667,6 +3667,42 @@ UniValue z_getoperationstatus_IMPL(const UniValue& params, bool fRemoveFinishedO
 #define CTXIN_SPEND_DUST_SIZE   148
 #define CTXOUT_REGULAR_SIZE     34
 
+CTransaction transactionFromUnivalue(const UniValue& params){
+        size_t i = 0;
+    CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
+
+    while(true) {
+        if (params.size() <= i)
+            break;
+        const char x = params[i].get_int();
+        ssq << x;
+        i++;
+    }
+
+    CTransaction tx;
+    ssq >> tx;
+    return tx;
+}
+
+UniValue univalueFromTransaction(const CTransaction& tx){
+    UniValue ret(UniValue::VARR);
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << tx;
+    std::vector<unsigned char> data(ss.begin(), ss.end());
+    for (unsigned char xx : data) {
+        ret.push_back(xx);
+    }
+    return ret;
+}
+
+UniValue receivetx(const UniValue& params, bool fHelp)
+{
+    CTransaction tx = transactionFromUnivalue(params);
+    static CNodeSignals g_signals;
+    boost::optional<bool> x = GetNodeSignals().ReceiveTx(Params(), tx, GetTime());
+    return "received";
+}
+
 UniValue z_sendmany(const UniValue& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))
@@ -3965,13 +4001,28 @@ UniValue z_sendmany(const UniValue& params, bool fHelp)
 
     // Create operation and add to global queue
     // std::shared_ptr<AsyncRPCQueue> q = getAsyncRPCQueue();
-    std::shared_ptr<AsyncRPCOperation> operation( new AsyncRPCOperation_sendmany(builder, contextualTx, fromaddress, taddrRecipients, zaddrRecipients, nMinDepth, nFee, contextInfo) );
-    operation->main();
+    std::shared_ptr<AsyncRPCOperation_sendmany> operation( new AsyncRPCOperation_sendmany(builder, contextualTx, fromaddress, taddrRecipients, zaddrRecipients, nMinDepth, nFee, contextInfo) );
+    CTransaction txx = operation->main_impl_return();
     // q->addOperation(operation);
-    
-    AsyncRPCOperationId operationId = operation->getId();
-    return operationId;
+    return univalueFromTransaction(txx);
+    // AsyncRPCOperationId operationId = operation->getId();
+    // /**
+    //  * uint256 hash = *it;
+    //                 // Not in the mempool anymore? don't bother sending it.
+    //                 auto txinfo = mempool.info(hash);
+    //                 if (!txinfo.tx) {
+    //                     continue;
+    //                 }
+    //                 CInv inv = InvForTransaction(txinfo.tx);
+    //                 put inv on a stream and send it back
+    //                 auto txinfo = mempool.info(inv.hash);
+    //                 put *txinfo.tx on a stream
+    //                 */
+
+    // return operationId;
 }
+
+
 
 UniValue z_setmigration(const UniValue& params, bool fHelp) {
     if (!EnsureWalletIsAvailable(fHelp))
@@ -4919,6 +4970,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "z_gettotalbalance",        &z_gettotalbalance,        false },
     { "wallet",             "z_mergetoaddress",         &z_mergetoaddress,         false },
     { "wallet",             "z_sendmany",               &z_sendmany,               false },
+    { "wallet",              "receivetx",                &receivetx, false},
     { "wallet",             "z_setmigration",           &z_setmigration,           false },
     { "wallet",             "z_getmigrationstatus",     &z_getmigrationstatus,     false },
     { "wallet",             "z_shieldcoinbase",         &z_shieldcoinbase,         false },
