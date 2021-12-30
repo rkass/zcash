@@ -16,7 +16,7 @@ The following document contains instructions for debugging `zcashd` on OSX. The 
 
 ```
 regtest=1 # Run in the regtest environment
-gen=1 # Enable mining
+gen=0 # Enable mining
 txindex=1 # Maintain a full transaction index
 genproclimit=1 # Use 1 thread for coin generation
 printtoconsole=1 # Log out to console instead of a debug.log file
@@ -46,7 +46,9 @@ Extension id: ms-vscode.cpptools
 
 ### 6. Create a launch.json
 
-Create a file called `./vscode/launch.json`. See below for what mine looks like. Change the `$HOME` environment variable to be whatever the output of `echo $HOME` is in your terminal.
+This doc teaches you how to attach to an already running zcashd launched from the command line. An earlier version of this doc specified how to launch zcashd from vs code itself. I've found the new workflow of launching on command line and attaching separately to be more reliable.
+
+Create a file called `./vscode/launch.json`. See below for what mine looks like.
 
 ```
 {
@@ -56,24 +58,24 @@ Create a file called `./vscode/launch.json`. See below for what mine looks like.
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(lldb) Launch",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/src/zcashd",
+            "name": "(lldb) Attach",
+            "type": "lldb",
+            "request": "attach",
+            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd_debug",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
-            "environment": [
-                {"name": "HOME", "value": "/Users/rkass"}
-            ],
-            "externalConsole": false,
-            "MIMode": "lldb"
-        }
+            "externalConsole": true,
+            "MIMode": "lldb",
+            "processId": "${command:pickProcess}",
+            "logging": {"trace": true, "engineLogging": true, "traceResponse": true}
+        },
     ]
 }
 ```
 
 ### Debug
 
-- Click `Run and Debug` along the left hand side of your VS code window
+- Ensure that zcashd is running on your machine via the earlier steps. Get the process id for this run (run `ps aux | grep zcashd`). 
+- Click `Run and Debug` along the left hand side of your VS code window and you'll be prompted for the process id you want to attach to. Input the process id you found in the previous step. 
 - To verify, once your program is running, put a breakpoint in an RPC handler, for example try adding a breakpoint to `getblockcount` in `src/rpc/blockchain.cpp` and invoking the same rpc method as we did above: `./src/zcash-cli getblockcount`. Verify that your breakpoint is hit.

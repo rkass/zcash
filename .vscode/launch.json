@@ -39,12 +39,9 @@
             "type": "lldb",
             "request": "attach",
             "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd_debug",
-            "args": ["-keypool=1", "-discover=0", "-rest", "-nuparams=5ba81b19:1", "-nuparams=76b809bb:1"],
+            "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
-            // "environment": [
-            //     {"name": "HOME", "value": "/Users/rkass"}
-            // ],
             "externalConsole": true,
             "MIMode": "lldb",
             "processId": "${command:pickProcess}",
