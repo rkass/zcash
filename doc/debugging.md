@@ -20,6 +20,7 @@ mkdir $HOME/Library/Application\ Support/Zcash0/
 
 Then, create a file called `zcash.conf` in the above directory.
 
+```
 regtest=1 # Run in the regtest environment
 gen=0 # Disable mining
 txindex=1 # Maintain a full transaction index
