@@ -12,11 +12,16 @@ The following document contains instructions for debugging `zcashd` on OSX. The 
 
 ### 2. Create a Configuration
 
-- By default, Zcash looks for my configuration in `"$HOME/Library/Application\ Support/Zcash/zcash.conf"`, so put a configuration file here. Here's what my configuration file looks like: 
+- By default, Zcash looks for my configuration in `"$HOME/Library/Application\ Support/Zcash/zcash.conf"`. Let's make a new directory and explicitly state where zcash should get its conf so we can easily toggle between different configurations for different node numbers. 
 
 ```
+mkdir $HOME/Library/Application\ Support/Zcash0/
+```
+
+Then, create a file called `zcash.conf` in the above directory.
+
 regtest=1 # Run in the regtest environment
-gen=0 # Enable mining
+gen=0 # Disable mining
 txindex=1 # Maintain a full transaction index
 genproclimit=1 # Use 1 thread for coin generation
 printtoconsole=1 # Log out to console instead of a debug.log file
@@ -29,7 +34,7 @@ rpcpassword=pw # for dev, change when going to prod
 
 Verify that you can run zcashd without debugging.
 
-- From terminal: `./src/zcashd`
+- From terminal: `DISABLE_POW=true HOME=/Users/rkass ./src/zcashd`
 - Once your program has booted up, fire an rpc call to ensure the program started successfully:
 ```
 =>./src/zcash-cli getblockcount
