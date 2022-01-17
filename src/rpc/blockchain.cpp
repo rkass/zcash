@@ -693,6 +693,79 @@ UniValue getblockheader(const UniValue& params, bool fHelp)
     return blockheaderToJSON(pblockindex);
 }
 
+CBlock blockFromUnivalue(const UniValue& params) {
+    size_t i = 0;
+    CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
+
+    while(true) {
+        if (params.size() <= i)
+            break;
+        const char x = params[i].get_int();
+        ssq << x;
+        i++;
+    }
+
+    CBlock b;
+    b.SetNull();
+    ssq >> b;
+    return b;
+}
+
+UniValue univalueFromBlock(const CBlock& block) {
+    UniValue ret(UniValue::VARR);
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << block;
+    std::vector<unsigned char> data(ss.begin(), ss.end());
+    for (unsigned char xx : data) {
+        ret.push_back(xx);
+    }
+    return ret;
+}
+
+UniValue getserializedblock(const UniValue& params, bool fHelp)
+{
+    
+    LOCK(cs_main);
+
+    UniValue p = params[0];
+
+    std::string strHash = params[0].get_str();
+
+    // If height is supplied, find the hash
+    if (strHash.size() < (2 * sizeof(uint256))) {
+        strHash = chainActive[parseHeightArg(strHash, chainActive.Height())]->GetBlockHash().GetHex();
+    }
+
+    uint256 hash(uint256S(strHash));
+
+    int verbosity = 1;
+    if (params.size() > 1) {
+        if(params[1].isNum()) {
+            verbosity = params[1].get_int();
+        } else {
+            verbosity = params[1].get_bool() ? 1 : 0;
+        }
+    }
+
+    if (verbosity < 0 || verbosity > 2) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Verbosity must be in range from 0 to 2");
+    }
+
+    if (mapBlockIndex.count(hash) == 0)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+    CBlock block;
+    CBlockIndex* pblockindex = mapBlockIndex[hash];
+
+    if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Block not available (pruned data)");
+
+    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+
+    return univalueFromBlock(block);
+}
+
 UniValue getblock(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
@@ -1458,6 +1531,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "gettxout",               &gettxout,               true  },
     { "blockchain",         "gettxoutsetinfo",        &gettxoutsetinfo,        true  },
     { "blockchain",         "verifychain",            &verifychain,            true  },
+    { "blockchain",         "getserializedblock",     &getserializedblock,     true  },
 
     // insightexplorer
     { "blockchain",         "getblockdeltas",         &getblockdeltas,         false },
