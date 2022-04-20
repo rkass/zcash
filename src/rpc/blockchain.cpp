@@ -693,25 +693,7 @@ UniValue getblockheader(const UniValue& params, bool fHelp)
     return blockheaderToJSON(pblockindex);
 }
 
-CBlock blockFromUnivalue(const UniValue& params) {
-    size_t i = 0;
-    CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
-
-    while(true) {
-        if (params.size() <= i)
-            break;
-        const char x = params[i].get_int();
-        ssq << x;
-        i++;
-    }
-
-    CBlock b;
-    b.SetNull();
-    ssq >> b;
-    return b;
-}
-
-UniValue univalueFromBlock(const CBlock& block) {
+UniValue univalueFromBlk(const CBlock& block) {
     UniValue ret(UniValue::VARR);
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << block;
@@ -763,7 +745,7 @@ UniValue getserializedblock(const UniValue& params, bool fHelp)
     if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
 
-    return univalueFromBlock(block);
+    return univalueFromBlk(block);
 }
 
 UniValue getblock(const UniValue& params, bool fHelp)
