@@ -744,8 +744,13 @@ UniValue getserializedblock(const UniValue& params, bool fHelp)
 
     if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+    UniValue result(UniValue::VARR);
+    UniValue item(UniValue::VOBJ);
+    item.pushKV("block", univalueFromBlk(block));
+    item.pushKV("timestamp", block.GetBlockTime());
+    result.push_back(item);
 
-    return univalueFromBlk(block);
+    return result;
 }
 
 UniValue getblock(const UniValue& params, bool fHelp)
