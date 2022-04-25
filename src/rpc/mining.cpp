@@ -401,8 +401,14 @@ UniValue suggest(const UniValue& params, bool fHelp)
             }
         }
 endloop:
-        return univalueFromBlock(*pblock);
 
+        UniValue result(UniValue::VARR);
+        UniValue item(UniValue::VOBJ);
+        item.pushKV("block", univalueFromBlock(*pblock));
+        item.pushKV("timestamp", pblock->GetBlockTime());
+        result.push_back(item);
+
+        return result;
     }
     return "shouldn't be here";
 }
