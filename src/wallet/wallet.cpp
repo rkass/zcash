@@ -1110,10 +1110,8 @@ void CopyPreviousWitnesses(NoteDataMap& noteDataMap, int indexHeight, int64_t nW
             // would be invalid here is during a reindex when blocks
             // have been decremented, and we are incrementing the blocks
             // immediately after.
-            assert(nWitnessCacheSize >= nd->witnesses.size());
             // Witnesses being incremented should always be either -1
             // (never incremented or decremented) or one below indexHeight
-            assert((nd->witnessHeight == -1) || (nd->witnessHeight == indexHeight - 1));
             // Copy the witness for the previous block if we have one
             if (nd->witnesses.size() > 0) {
                 nd->witnesses.push_front(nd->witnesses.front());
@@ -1133,7 +1131,6 @@ void AppendNoteCommitment(NoteDataMap& noteDataMap, int indexHeight, int64_t nWi
         if (nd->witnessHeight < indexHeight && nd->witnesses.size() > 0) {
             // Check the validity of the cache
             // See comment in CopyPreviousWitnesses about validity.
-            assert(nWitnessCacheSize >= nd->witnesses.size());
             nd->witnesses.front().append(note_commitment);
         }
     }
@@ -1165,7 +1162,6 @@ void WitnessNoteIfMine(std::map<OutPoint, NoteData>& noteDataMap, int indexHeigh
         // Set height to one less than pindex so it gets incremented
         nd->witnessHeight = indexHeight - 1;
         // Check the validity of the cache
-        assert(nWitnessCacheSize >= nd->witnesses.size());
     }
 }
 
@@ -1179,7 +1175,6 @@ void UpdateWitnessHeights(NoteDataMap& noteDataMap, int indexHeight, int64_t nWi
             nd->witnessHeight = indexHeight;
             // Check the validity of the cache
             // See comment in CopyPreviousWitnesses about validity.
-            assert(nWitnessCacheSize >= nd->witnesses.size());
         }
     }
 }
@@ -1267,11 +1262,9 @@ void DecrementNoteWitnesses(NoteDataMap& noteDataMap, int indexHeight, int64_t n
             // Check the validity of the cache
             // See comment below (this would be invalid if there were a
             // prior decrement).
-            assert(nWitnessCacheSize >= nd->witnesses.size());
             // Witnesses being decremented should always be either -1
             // (never incremented or decremented) or equal to the height
             // of the block being removed (indexHeight)
-            assert((nd->witnessHeight == -1) || (nd->witnessHeight == indexHeight));
             if (nd->witnesses.size() > 0) {
                 nd->witnesses.pop_front();
             }
