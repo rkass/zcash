@@ -680,7 +680,7 @@ bool EnvVarBool(const char* envVar) {
 
 bool ShouldDisablePOW()
 {
-    return EnvVarBool("DISABLE_POW");
+    return true;
 }
 
 bool ShouldNotSolvePOW()
