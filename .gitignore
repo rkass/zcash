@@ -9,7 +9,7 @@ src/zcash-gtest
 src/zcash-tx
 src/test/test_bitcoin
 zcutil/bin/
-
+src/univalue/configure~
 *zcashTest.pk
 *zcashTest.vk
 
