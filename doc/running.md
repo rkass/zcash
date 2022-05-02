@@ -1,5 +1,7 @@
 # Running zcashd
 
+Compatible Operating Systems: OSX, Ubuntu
+
 Included with this project are two pre-built binaries, [zcashd_osx](https://github.com/zapalabs/zcash/blob/master/src/zcashd_osx) and [zcashd_linux](https://github.com/zapalabs/zcash/blob/master/src/zcashd_linux).
 You can either use the binary that suits your machine or build from source. Regardless of whether you build from source or use the pre-built binary, you must download the 
 cryptographic parameters for Zcash first by running `./zcutil/fetch-params.sh`. 
