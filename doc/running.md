@@ -91,7 +91,11 @@ mkdir -p $HOME/zcash_data/regtest3/
 mkdir -p $HOME/zcash_data/regtest4/
 ```
 ### 3. Run each node in a separate process. 
-Open 5 terminal windows, and run one commmand in each window (the below commands assume the data and config directories used above):
+Open 5 terminal windows, and run one commmand in each window. The below commands assume:
+
+- The data and config directories are as specified above -- change accordingly.
+- zcashd has been built from source, as directed in [Build zcashd](#1-build-zcashd-optional). If it has not been built from source, use the pre-built binary for your OS, either `zcashd_linux` or `zcashd_osx`.
+- We are in the `/src/` directory.
 
 #### Node 0
 ```
