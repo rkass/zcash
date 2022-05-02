@@ -1,6 +1,6 @@
 ## Mac OS X Debugging
 
-The following document contains instructions for debugging `zcashd` on OSX. The instructions below were what worked for my machine which is a Mid-2013 MacBook Air running OS `10.14.5` with 4 GB RAM.
+The following document contains instructions for debugging `zcashd` on OSX. The instructions below were what worked for my machine which is a Mid-2013 MacBook Air running OS `10.14.5` with 4 GB RAM. Note that zcash unfortunately does not yet build on M1 macs. That said, I have had success running [zcashd_osx](https://github.com/zapalabs/zcash/blob/master/src/zcashd_osx) on an M1.
 
 ### 1. Build zcash
 
@@ -26,7 +26,7 @@ gen=0 # Disable mining
 txindex=1 # Maintain a full transaction index
 genproclimit=1 # Use 1 thread for coin generation
 printtoconsole=1 # Log out to console instead of a debug.log file
-rpcport=8232 # define port to expose rpc on
+rpcport=8234 # define port to expose rpc on
 rpcuser=test # for dev, change when going to prod
 rpcpassword=pw # for dev, change when going to prod
 ```
@@ -35,7 +35,7 @@ rpcpassword=pw # for dev, change when going to prod
 
 Verify that you can run zcashd without debugging.
 
-- From terminal: `DISABLE_POW=true HOME=/Users/rkass ./src/zcashd`
+- From terminal: `./src/zcashd`
 - Once your program has booted up, fire an rpc call to ensure the program started successfully:
 ```
 =>./src/zcash-cli getblockcount
@@ -67,7 +67,7 @@ Create a file called `./vscode/launch.json`. See below for what mine looks like.
             "name": "(lldb) Attach",
             "type": "lldb",
             "request": "attach",
-            "program": "/Users/rkass/repos/z-sno/zcash/src/zcashd_debug",
+            "program": "/Users/rkass/repos/zapa/zcash/src/zcashd",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
