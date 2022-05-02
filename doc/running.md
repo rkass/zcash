@@ -3,13 +3,16 @@
 Compatible Operating Systems: OSX, Ubuntu
 
 Included with this project are two pre-built binaries, [zcashd_osx](https://github.com/zapalabs/zcash/blob/master/src/zcashd_osx) and [zcashd_linux](https://github.com/zapalabs/zcash/blob/master/src/zcashd_linux).
-You can either use the binary that suits your machine or build from source. Regardless of whether you build from source or use the pre-built binary, you must download the 
-cryptographic parameters for Zcash first by running `./zcutil/fetch-params.sh`. 
-
+You can either use the binary that suits your machine or build from source. 
 When Zcash is run as part of the Zapa project, its data directory (with the exception of wallet.dat) needs to be cleared out before startup. Zcash learns about the initial blockchain state via
 the boostrapping mechanism of Avalanche, and thus does not rely on blockchain state written to files. 
 
-### 1. Build zcashd (optional)
+### 1. Fetch Params
+Regardless of whether you build from source or use the pre-built binary, you must download the 
+cryptographic parameters for Zcash first by running `./zcutil/fetch-params.sh`. 
+
+
+### 2. Build zcashd (optional)
 
 - Follow instructions from zcash docs for building zcash from source: https://zcash.readthedocs.io/en/latest/rtd_pages/macOS-build.html
 - For building on my machine which is a Mid-2013 MacBook Air running OS `10.14.5` with 4 GB RAM I needed to take the following additional measures:
@@ -18,7 +21,7 @@ the boostrapping mechanism of Avalanche, and thus does not rely on blockchain st
     - My full command looks like: `CONFIGURE_FLAGS='CXXFLAGS=-O0' ./zcutil/build.sh -j2`
 - Note that when you update cpp code, you don't have to run this command again. You can simply run `make` to compile your code.
 
-### 2. Create a Configuration
+### 3. Create a Configuration
 
 - By default (on OSX), Zcash looks for configuration in `"$HOME/Library/Application\ Support/Zcash/zcash.conf"`. Let's make a new directory and explicitly state where zcash should get its conf so we can easily toggle between different configurations for different node numbers. Note that it doesn't matter where the directory is located.
 
@@ -40,7 +43,7 @@ rpcuser=test # for dev, change when going to prod
 rpcpassword=pw # for dev, change when going to prod
 ```
 
-### 3. Run zcashd
+### 4. Run zcashd
 
 - From terminal: `./src/zcashd`
 - Once your program has booted up, fire an rpc call to ensure the program started successfully:
@@ -96,7 +99,7 @@ mkdir -p $HOME/zcash_data/regtest4/
 Open 5 terminal windows, and run one commmand in each window. The below commands assume:
 
 - The data and config directories are as specified above -- change accordingly.
-- zcashd has been built from source, as directed in [Build zcashd](#1-build-zcashd-optional). If it has not been built from source, use the pre-built binary for your OS, either `zcashd_linux` or `zcashd_osx`.
+- zcashd has been built from source, as directed in [Build zcashd](#2-build-zcashd-optional). If it has not been built from source, use the pre-built binary for your OS, either `zcashd_linux` or `zcashd_osx`.
 - We are in the `/src/` directory.
 
 #### Node 0
