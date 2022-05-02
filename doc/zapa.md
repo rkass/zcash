@@ -12,4 +12,4 @@ Proof of Work has been disabled because the consensus mechanism used to determin
 
 ## Api Additions
 
-See [Zapa Api Addditions](https://github.com/zapalabs/zcash/blob/master/doc/zapa_api_additions.md) for a list of API changes.
+See [API](https://github.com/zapalabs/zcash/blob/master/doc/api.md) for a list of API changes.
