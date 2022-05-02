@@ -1,6 +1,6 @@
-# Zapa API Additions
+# API
 
-In order to be a useful resource for the zapavm Avalanche plugin, the following RPC endpoints have been added or modified:
+In order to be a useful resource for the zapavm Avalanche plugin, the following RPC endpoints have been added or modified. Unless otherwise noted, all endpoints listed here are supported as well https://zcash-rpc.github.io/.
 
 ## Get Serialized Block (Added)
 
