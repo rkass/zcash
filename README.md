@@ -6,7 +6,7 @@ Adapted for Zapa
 ---------------
 
 - For Zapa specific instructions on how to run, see [running.md](https://github.com/zapalabs/zcash/blob/master/doc/running.md)
-- For the changes made to this codebase to accomodate the goals of Zapa see [zapa.md](https://github.com/zapalabs/zcash/blob/master/doc/zapa.md)
+- For changes made to this codebase to accomodate the goals of Zapa see [zapa.md](https://github.com/zapalabs/zcash/blob/master/doc/zapa.md)
 
 The rest of the README is taken directly from the parent repo.
 
