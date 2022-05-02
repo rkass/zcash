@@ -60,6 +60,11 @@ Currently, Zcash is only officially supported on Debian and Ubuntu. See the
 [Debian / Ubuntu build](https://zcash.readthedocs.io/en/latest/rtd_pages/Debian-Ubuntu-build.html)
 for detailed instructions.
 
+### Zapa Specific
+
+- For Zapa specific instructions on how to run, see [running.md](https://github.com/zapalabs/zcash/blob/master/doc/running.md)
+- For Additions Zapa specific additions to the [existing API spec](https://zcash-rpc.github.io/) see [zapa_api_additions.md](https://github.com/zapalabs/zcash/blob/master/doc/zapa_api_additions.md)
+
 License
 -------
 
