@@ -70,7 +70,7 @@ provide an alternate directory as an argument to the script. e.g. `./restart_zca
 - Clears out the data directory
 - Launches Zcash as a background process
 
-## Running zcashd: As Part of a 5 Node Local Setup
+## Running zcashd: A 5 Node Local Setup
 
 This section contains directions for spinning up five zcashd processes which each validate a local blockchain. Each of these processes are meant to communicate
 with a zapavm plugin launched via ava-sim.
