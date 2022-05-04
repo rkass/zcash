@@ -2,6 +2,10 @@
 
 This doc lists changes made to Zcash in order to accomodate the goals of Zapa.
 
+## Api Additions
+
+Many endpoints have been added and modified to support the Zapa runtime environment. See [API](https://github.com/zapalabs/zcash/blob/master/doc/api.md) for a list of API changes.
+
 ## Disable POW
 
 Proof of Work has been disabled. This means that when producing blocks the node doesn't solve the Proof of Work challenge, and when validating blocks the node doesn't validate the equihash solution.
@@ -10,6 +14,4 @@ This is configurable and decided via the `ShouldNotSolvePOW` and `ShouldNotVerif
 
 Proof of Work has been disabled because the consensus mechanism used to determine which node produces the next block is decided by Snowman consensus within Avalanche.
 
-## Api Additions
 
-See [API](https://github.com/zapalabs/zcash/blob/master/doc/api.md) for a list of API changes.
