@@ -5,7 +5,9 @@ src/bitcoin
 src/zcashd
 src/zcashd_debug*
 src/zcash-cli
+src/zcashd_linux
 src/zcash-gtest
+src/zcashd_osx
 src/zcash-tx
 src/test/test_bitcoin
 zcutil/bin/

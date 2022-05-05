@@ -46,11 +46,11 @@ echo "Launching zcash with port=$port, conf=$conf, and datadir=$datadir"
 
 if [ ! -f "zcashd" ]; then
   if [ "$(uname)" == "Darwin" ]; then
-    echo "Detected we are on OSX and we have not built from source. Copying zcashd_osx to zcashd."
-    cp zcashd_osx zcashd
+    echo "Detected we are on OSX and we have not built from source. Unzipping zcashd_osx and copying zcashd_osx to zcashd."
+    unzip zcashd_osx.zip && cp zcashd_osx zcashd
   elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    echo "Detected we are on linux and we have not built from source. Copying zcashd_linux to zcashd."
-    cp zcashd_linux zcashd
+    echo "Detected we are on linux and we have not built from source. Unzipping zcashd_linux and copying zcashd_linux to zcashd."
+    unzip zcashd_linux.zip && cp zcashd_linux zcashd
   else
     echo "Zcashd only supported on Linux and OSX"
     exit 1
