@@ -49,7 +49,7 @@ if [ ! -f "zcashd" ]; then
     echo "Detected we are on OSX and we have not built from source. Copying zcashd_osx to zcashd."
     cp zcashd_osx zcashd
   elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    echo "Detected we are on OSX and we have not built from source. Copying zcashd_osx to zcashd."
+    echo "Detected we are on linux and we have not built from source. Copying zcashd_linux to zcashd."
     cp zcashd_linux zcashd
   else
     echo "Zcashd only supported on Linux and OSX"
