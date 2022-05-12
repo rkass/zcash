@@ -748,8 +748,8 @@ UniValue getserializedblock(const UniValue& params, bool fHelp)
     UniValue item(UniValue::VOBJ);
     item.pushKV("block", univalueFromBlk(block));
     item.pushKV("timestamp", block.GetBlockTime());
-    item.pushKV("hash", (int64_t) int(block.GetHash()));
-    item.pushKV("parent", (int64_t) int(block.hashPrevBlock));
+    item.pushKV("hash", block.GetHash().GetHex());
+    item.pushKV("parent", block.hashPrevBlock.GetHex());
     result.push_back(item);
 
     return result;
