@@ -1185,7 +1185,7 @@ UniValue validateBlock(const UniValue& params, bool fHelp)
     if (thisHash == actualPrevBlock)
         return "i-am-block-producer";
     if (thisPrevBlock != actualPrevBlock)
-        return "inconclusive-not-best-prevblk";
+        return "incongruous-parents-received-" + thisHash.GetHex() + "-think-" + actualPrevBlock.GetHex();
     TestBlockValidity(state, Params(), b2, pindexPrev, true);
     return BIP22ValidationResult(state);
 }
