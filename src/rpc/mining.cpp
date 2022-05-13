@@ -1134,9 +1134,28 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     //         + HelpExampleRpc("submitblock", "\"mydata\"")
     //     );
 
-    const CBlock block = blockFromUnivalue(params);
 
-    uint256 hash = block.GetHash();
+    // first validate block
+
+    const CBlock b2 = blockFromUnivalue(params);
+    CValidationState stateVal;
+    CBlockIndex* const pindexPrev = chainActive.Tip();
+    // TestBlockValidity only supports blocks built on the current Tip
+    uint256 thisPrevBlock = b2.hashPrevBlock;
+    CBlockHeader thisHeader = b2.GetBlockHeader();
+    uint256 thisHash = thisHeader.GetHash();
+    uint256 actualPrevBlock = pindexPrev->GetBlockHash();
+    if (thisHash == actualPrevBlock)
+        return "i-am-block-producer";
+    if (thisPrevBlock != actualPrevBlock)
+        return "validation-failed-incongruous-parents-received-" + thisHash.GetHex() + "-think-" + actualPrevBlock.GetHex();
+    TestBlockValidity(stateVal, Params(), b2, pindexPrev, true);
+    const UniValue u = BIP22ValidationResult(stateVal);
+    if u != NullUniValue {
+        return u;
+    }
+
+    uint256 hash = b2.GetHash();
     bool fBlockPresent = false;
     {
         LOCK(cs_main);
@@ -1153,9 +1172,9 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     }
 
     CValidationState state;
-    submitblock_StateCatcher sc(block.GetHash());
+    submitblock_StateCatcher sc(b2.GetHash());
     RegisterValidationInterface(&sc);
-    bool fAccepted = ProcessNewBlock(state, Params(), NULL, &block, true, NULL);
+    bool fAccepted = ProcessNewBlock(state, Params(), NULL, &b2, true, NULL);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)
     {
