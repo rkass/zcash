@@ -314,7 +314,7 @@ std::vector<CBlock> blocksFromUnivalue(const UniValue& params)
 {
     size_t i = 0;
     CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
-    static std::vector<CBlock> blocks;
+    std::vector<CBlock> blocks;
     while (true) {
         if (params.size() <= i)
             break;
