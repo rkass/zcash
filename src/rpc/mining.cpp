@@ -316,7 +316,7 @@ std::vector<CBlock> blocksFromUnivalue(const UniValue& params)
     CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
     static std::vector<CBlock> blocks;
     while (true) {
-        if (params.size() <= i || i == 2)
+        if (params.size() <= i)
             break;
         const std::vector<UniValue>& values = params[i].getValues();
         for (auto v = values.begin(); v != values.end(); ++v) {
@@ -1209,12 +1209,15 @@ UniValue validateBlocks(const UniValue& params, bool fHelp)
     if (thisHash == actualPrevBlock)
         return "i-am-block-producer";
     if (thisPrevBlock != actualPrevBlock) {
+        for (auto desc = begin(blocks) + 1; desc != end(blocks); ++desc) {
         // if parent block exists and p's prevblick matches actualprevblock
-        if (blocks.size() == 2 && blocks[1].hashPrevBlock == actualPrevBlock) {
-            // append current block txs to parent and testblockvalidity
-            blocks[1].vtx.insert(blocks[1].vtx.end(), blocks[0].vtx.begin(), blocks[0].vtx.end());
-            TestBlockValidity(state, Params(), blocks[1], pindexPrev, true);
+            if (desc->hashPrevBlock == actualPrevBlock) {
+                // append block in ascending time order and testblockvalidity
+                for (auto asc = desc - 1; asc != begin(blocks); --asc)
+                    desc->vtx.insert(desc->vtx.end(), asc->vtx.begin(), asc->vtx.end());
+                TestBlockValidity(state, Params(), *desc, pindexPrev, true);
             return BIP22ValidationResult(state);
+            }
         }
         return "inconclusive-not-best-prevblk";
     }
