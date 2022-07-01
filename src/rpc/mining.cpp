@@ -1391,9 +1391,13 @@ static const CRPCCommand commands[] =
     { "mining",             "submitblock",            &submitblock,            true  },
     { "mining",             "getblocksubsidy",        &getblocksubsidy,        true  },
 
-
-        {"generating", "validateBlocks", &validateBlocks, true}, // todo -- category is incorrect
-    {"generating", "prevBlockTimeAndHash", &prevBlockTimeAndHash, true},
+    { "generating",         "getgenerate",            &getgenerate,            true  },
+    { "generating",         "setgenerate",            &setgenerate,            true  },
+    { "generating",         "generate",               &generate,               true  },
+    { "generating",         "generateAndReturn",      &generateAndReturn,      true  },
+    { "generating",         "suggest",                &suggest,                true  },
+    { "generating",         "validateBlocks",         &validateBlocks,         true  }, // todo -- category is incorrect
+    { "generating",         "prevBlockTimeAndHash",   &prevBlockTimeAndHash,   true  },
 
 
     { "util",               "estimatefee",            &estimatefee,            true  },
