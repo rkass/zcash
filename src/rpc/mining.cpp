@@ -1206,19 +1206,25 @@ UniValue validateBlocks(const UniValue& params, bool fHelp)
     CBlockHeader thisHeader = blocks[0].GetBlockHeader();
     uint256 thisHash = thisHeader.GetHash();
     uint256 actualPrevBlock = pindexPrev->GetBlockHash();
+    LogPrintf("validating %i blocks", blocks.size());
     if (thisHash == actualPrevBlock)
         return "i-am-block-producer";
+    
     for (auto desc = begin(blocks) ; desc != end(blocks); ++desc) {
-        // if parent block exists and p's prevblick matches actualprevblock
+            // if parent block exists and p's prevblick matches actualprevblock
+            LogPrintf("Doing iteration");
             if (desc->hashPrevBlock == actualPrevBlock) {
+                LogPrintf("Found most shallow block");
                 // append block in ascending time order and testblockvalidity
-            for (auto asc = desc - 1; asc != begin(blocks)-1; --asc)
+                for (auto asc = desc - 1; asc != begin(blocks)-1; --asc) {
+                    LogPrintf("appending block");
                     desc->vtx.insert(desc->vtx.end(), asc->vtx.begin(), asc->vtx.end());
+                }
                 TestBlockValidity(state, Params(), *desc, pindexPrev, true);
-            return BIP22ValidationResult(state);
-        }
+                return BIP22ValidationResult(state);
+            }
     }
-        return "inconclusive-not-best-prevblk";
+    return "inconclusive-not-best-prevblk";
 }
 
 UniValue prevBlockTimeAndHash(const UniValue& params, bool fHelp)
