@@ -310,7 +310,31 @@ CBlock blockFromUnivalue(const UniValue& params) {
     return b;
 }
 
-UniValue univalueFromBlock(const CBlock& block) {
+std::vector<CBlock> blocksFromUnivalue(const UniValue& params)
+{
+    size_t i = 0;
+    CDataStream ssq(SER_NETWORK, PROTOCOL_VERSION);
+    std::vector<CBlock> blocks;
+    while (true) {
+        if (params.size() <= i)
+            break;
+        const std::vector<UniValue>& values = params[i].getValues();
+        for (auto v = values.begin(); v != values.end(); ++v) {
+            const char x = v->get_int();
+            ssq << x;
+        }
+        CBlock b;
+        b.SetNull();
+        ssq >> b;
+        blocks.push_back(b);
+        ssq = CDataStream(SER_NETWORK, PROTOCOL_VERSION);
+        i++;
+    }
+    return blocks;
+}
+
+UniValue univalueFromBlock(const CBlock& block)
+{
     UniValue ret(UniValue::VARR);
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << block;
@@ -1172,22 +1196,29 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     return BIP22ValidationResult(state);
 }
 
-UniValue validateBlock(const UniValue& params, bool fHelp)
+UniValue validateBlocks(const UniValue& params, bool fHelp)
 {
-    const CBlock b2 = blockFromUnivalue(params);
+    std::vector<CBlock> blocks = blocksFromUnivalue(params);
     CValidationState state;
     CBlockIndex* const pindexPrev = chainActive.Tip();
     // TestBlockValidity only supports blocks built on the current Tip
-    uint256 thisPrevBlock = b2.hashPrevBlock;
-    CBlockHeader thisHeader = b2.GetBlockHeader();
+    uint256 thisPrevBlock = blocks[0].hashPrevBlock;
+    CBlockHeader thisHeader = blocks[0].GetBlockHeader();
     uint256 thisHash = thisHeader.GetHash();
     uint256 actualPrevBlock = pindexPrev->GetBlockHash();
     if (thisHash == actualPrevBlock)
         return "i-am-block-producer";
-    if (thisPrevBlock != actualPrevBlock)
+    for (auto desc = begin(blocks) ; desc != end(blocks); ++desc) {
+        // if parent block exists and p's prevblick matches actualprevblock
+            if (desc->hashPrevBlock == actualPrevBlock) {
+                // append block in ascending time order and testblockvalidity
+            for (auto asc = desc - 1; asc != begin(blocks)-1; --asc)
+                    desc->vtx.insert(desc->vtx.end(), asc->vtx.begin(), asc->vtx.end());
+                TestBlockValidity(state, Params(), *desc, pindexPrev, true);
+            return BIP22ValidationResult(state);
+        }
+    }
         return "inconclusive-not-best-prevblk";
-    TestBlockValidity(state, Params(), b2, pindexPrev, true);
-    return BIP22ValidationResult(state);
 }
 
 UniValue prevBlockTimeAndHash(const UniValue& params, bool fHelp)
@@ -1359,14 +1390,13 @@ static const CRPCCommand commands[] =
     { "mining",             "submitblock",            &submitblock,            true  },
     { "mining",             "getblocksubsidy",        &getblocksubsidy,        true  },
 
-
     { "generating",         "getgenerate",            &getgenerate,            true  },
     { "generating",         "setgenerate",            &setgenerate,            true  },
     { "generating",         "generate",               &generate,               true  },
-    { "generating",         "generateAndReturn",      &generateAndReturn,               true  },
-    { "generating",         "suggest",                &suggest, true},
-    { "generating",         "validateBlock",          &validateBlock,           true}, // todo -- category is incorrect
-    {"generating", "prevBlockTimeAndHash", &prevBlockTimeAndHash, true},
+    { "generating",         "generateAndReturn",      &generateAndReturn,      true  },
+    { "generating",         "suggest",                &suggest,                true  },
+    { "generating",         "validateBlocks",         &validateBlocks,         true  }, // todo -- category is incorrect
+    { "generating",         "prevBlockTimeAndHash",   &prevBlockTimeAndHash,   true  },
 
 
     { "util",               "estimatefee",            &estimatefee,            true  },
