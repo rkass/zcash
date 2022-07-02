@@ -1208,21 +1208,17 @@ UniValue validateBlocks(const UniValue& params, bool fHelp)
     uint256 actualPrevBlock = pindexPrev->GetBlockHash();
     if (thisHash == actualPrevBlock)
         return "i-am-block-producer";
-    if (thisPrevBlock != actualPrevBlock) {
-        for (auto desc = begin(blocks) + 1; desc != end(blocks); ++desc) {
+    for (auto desc = begin(blocks) ; desc != end(blocks); ++desc) {
         // if parent block exists and p's prevblick matches actualprevblock
             if (desc->hashPrevBlock == actualPrevBlock) {
                 // append block in ascending time order and testblockvalidity
-                for (auto asc = desc - 1; asc != begin(blocks); --asc)
+            for (auto asc = desc - 1; asc != begin(blocks)-1; --asc)
                     desc->vtx.insert(desc->vtx.end(), asc->vtx.begin(), asc->vtx.end());
                 TestBlockValidity(state, Params(), *desc, pindexPrev, true);
             return BIP22ValidationResult(state);
-            }
         }
-        return "inconclusive-not-best-prevblk";
     }
-    TestBlockValidity(state, Params(), blocks[0], pindexPrev, true);
-    return BIP22ValidationResult(state);
+        return "inconclusive-not-best-prevblk";
 }
 
 UniValue prevBlockTimeAndHash(const UniValue& params, bool fHelp)
